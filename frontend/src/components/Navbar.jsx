@@ -1,16 +1,36 @@
 // Navbar Component
-import React from 'react';
+import React, { useContext } from 'react';
+import { Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
+import authService from '../services/authService';
 
 const Navbar = () => {
+  const { isAuthenticated, logout } = useContext(AuthContext);
+
+  const handleLogout = () => {
+    logout();
+    authService.logout();
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-container">
-        <div className="logo">SureFix</div>
+        <Link to="/" className="logo">SureFix</Link>
         <ul className="nav-menu">
-          <li><a href="/">Home</a></li>
-          <li><a href="/devices">My Devices</a></li>
-          <li><a href="/centres">Find Centres</a></li>
-          <li><a href="/profile">Profile</a></li>
+          <li><Link to="/">Home</Link></li>
+          {isAuthenticated ? (
+            <>
+              <li><Link to="/my-devices">My Devices</Link></li>
+              <li><Link to="/find-centres">Find Centres</Link></li>
+              <li><Link to="/profile">Profile</Link></li>
+              <li><button onClick={handleLogout} className="logout-btn">Logout</button></li>
+            </>
+          ) : (
+            <>
+              <li><Link to="/login">Login</Link></li>
+              <li><Link to="/register">Register</Link></li>
+            </>
+          )}
         </ul>
       </div>
     </nav>
