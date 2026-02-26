@@ -1,28 +1,26 @@
 {
-    "name": "appointments",
-    "version": "1.0.0",
-    "description": "Appointment management system",
-    "main": "server.js",
-    "type": "module",
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "dev": "nodemon server.js"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/blaisema22/Electrical_Repair_Appointment-E-commerce_system.git"
-    },
-    "author": "BlaiseM",
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/blaisema22/Electrical_Repair_Appointment-E-commerce_system/issues"
-    },
-    "homepage": "https://github.com/blaisema22/Electrical_Repair_Appointment-E-commerce_system#readme",
-    "dependencies": {
-        "bcrypt": "^6.0.0",
-        "cors": "^2.8.5",
-        "dotenv": "^17.2.3",
-        "express": "^5.2.1",
-        "nodemon": "^3.1.11"
-    }
+  "name": "surefix-backend",
+  "version": "1.0.0",
+  "description": "SureFix Electronic Repair Platform - REST API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:migrate": "node src/config/migrate.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.6.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.9.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
 }
