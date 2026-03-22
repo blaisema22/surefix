@@ -13,6 +13,7 @@ CREATE TABLE users (
   password_hash VARCHAR(255) NOT NULL,
   phone         VARCHAR(20),
   role          ENUM('customer','repairer','admin') DEFAULT 'customer',
+  profile_image_url VARCHAR(255) DEFAULT NULL,
   is_verified   BOOLEAN DEFAULT FALSE,
   verification_token VARCHAR(255),
   reset_token   VARCHAR(255),
@@ -90,6 +91,18 @@ CREATE TABLE appointments (
   FOREIGN KEY (service_id) REFERENCES services(service_id)      ON DELETE CASCADE
 );
 
+-- ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
+CREATE TABLE notifications (
+  notification_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id         INT NOT NULL,
+  title           VARCHAR(200) NOT NULL,
+  message         TEXT NOT NULL,
+  type            ENUM('info','success','warning','error','appointment') DEFAULT 'info',
+  is_read         BOOLEAN DEFAULT FALSE,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
 -- ═══════════════════════════════════════════════════════════════════════════
 -- SEED DATA
 -- DEFAULT PASSWORDS (all accounts use same hash for demo convenience)
@@ -111,6 +124,13 @@ INSERT INTO users (name, email, password_hash, phone, role, is_verified) VALUES
 -- Sample customer (user_id: 7)
 INSERT INTO users (name, email, password_hash, phone, role, is_verified) VALUES
 ('Alice Mukamana', 'alice@example.com', '$2a$12$rdu6namMM3NbVfUKKz5vtOZfZyDL8AjmZS4TFq0ctmNh2tfThSBYe', '+250788000001', 'customer', TRUE);
+
+-- Sample notifications for demo users
+INSERT INTO notifications (user_id, title, message, type) VALUES
+(1, 'Welcome to SureFix!', 'Your admin account has been created successfully. Use your dashboard to manage users and centres.', 'success'),
+(7, 'Welcome Alice!', 'Thanks for joining SureFix. Find nearby repair centres and book appointments easily.', 'success'),
+(2, 'New appointment request', 'Alice Mukamana booked Screen Replacement at TechFix Kigali', 'appointment'),
+(3, 'Centre visibility updated', 'Your centre iRepair Centre is now visible to customers', 'info');
 
 -- Repair centres (owner_id references repairer user_ids above)
 INSERT INTO repair_centres (owner_id, name, address, district, latitude, longitude, phone, email, description, opening_time, closing_time, is_active, is_visible) VALUES
@@ -148,4 +168,3 @@ INSERT INTO services (centre_id, service_name, description, device_category, est
 (5,'iPad Repair','All iPad models','tablet',30000,90000,120),
 (5,'Camera Module Replacement','Front and rear camera replacement','smartphone',15000,50000,90),
 (5,'Speaker/Mic Repair','Audio component repairs','smartphone',10000,30000,60);
-

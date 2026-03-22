@@ -1,0 +1,7 @@
+Starting test...
+DB module loaded
+Testing connection...
+✅ Connected to MySQL
+Tables: [{"Tables_in_surefix_db":"appointments"},{"Tables_in_surefix_db":"devices"},{"Tables_in_surefix_db":"repair_centres"},{"Tables_in_surefix_db":"services"},{"Tables_in_surefix_db":"users"}]
+Centres found: 5
+Test completed successfully!

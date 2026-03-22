@@ -1,0 +1,608 @@
+/* ─────────────────────────────────────────────
+   SureFix — Device Pages Shared Styles
+   ───────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+.dv-root * {
+    font-family: 'Outfit', sans-serif;
+    box-sizing: border-box;
+}
+
+
+/* ── Animations ── */
+
+@keyframes dv-up {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes dv-scale {
+    from {
+        opacity: 0;
+        transform: scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.dv-fade {
+    animation: dv-up 0.4s ease both;
+}
+
+.dv-scale {
+    animation: dv-scale 0.3s ease both;
+}
+
+.dv-s1 {
+    animation-delay: 0.05s;
+}
+
+.dv-s2 {
+    animation-delay: 0.12s;
+}
+
+.dv-s3 {
+    animation-delay: 0.19s;
+}
+
+.dv-s4 {
+    animation-delay: 0.26s;
+}
+
+
+/* ── Page wrapper ── */
+
+.dv-page {
+    width: 100%;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 36px 40px 60px;
+}
+
+
+/* ── Page header ── */
+
+.dv-page-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(249, 115, 22, 0.75);
+    margin-bottom: 8px;
+}
+
+.dv-page-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.6px;
+    line-height: 1.1;
+    margin: 0 0 8px;
+}
+
+.dv-page-sub {
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.3);
+    margin: 0;
+}
+
+
+/* ── Header row ── */
+
+.dv-header-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+
+/* ── Add button ── */
+
+.dv-btn-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 4px 18px rgba(249, 115, 22, 0.3);
+    transition: all 0.2s;
+}
+
+.dv-btn-add:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4);
+}
+
+
+/* ── Ghost button ── */
+
+.dv-btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.45);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dv-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.dv-btn-ghost:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+
+/* ── Device card ── */
+
+.dv-card {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 18px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.22s, transform 0.22s, box-shadow 0.22s;
+}
+
+.dv-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 18px 18px 0 0;
+    background: linear-gradient(90deg, #f97316, #ea580c);
+    opacity: 0;
+    transition: opacity 0.22s;
+}
+
+.dv-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(249, 115, 22, 0.22);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+}
+
+.dv-card:hover::before {
+    opacity: 1;
+}
+
+
+/* device icon box */
+
+.dv-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    background: rgba(249, 115, 22, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f97316;
+    flex-shrink: 0;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.dv-card:hover .dv-icon-box {
+    background: rgba(249, 115, 22, 0.18);
+    transform: scale(1.08);
+}
+
+.dv-card-brand {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.22);
+}
+
+.dv-card-model {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.2px;
+    line-height: 1.2;
+}
+
+.dv-card-type {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: rgba(249, 115, 22, 0.7);
+}
+
+
+/* meta pills */
+
+.dv-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 500;
+}
+
+
+/* issue box */
+
+.dv-issue-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.dv-issue-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.2);
+    margin-bottom: 5px;
+}
+
+.dv-issue-text {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    line-height: 1.55;
+}
+
+
+/* card action buttons */
+
+.dv-card-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dv-btn-edit {
+    flex: 1;
+    padding: 9px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: rgba(96, 165, 250, 0.75);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+.dv-btn-edit:hover {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.45);
+    color: #93c5fd;
+}
+
+.dv-btn-delete {
+    flex: 1;
+    padding: 9px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: rgba(239, 68, 68, 0.6);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+.dv-btn-delete:hover {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+}
+
+
+/* ── Empty state ── */
+
+.dv-empty {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px;
+    text-align: center;
+    border: 1px dashed rgba(255, 255, 255, 0.09);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.015);
+}
+
+.dv-empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.15);
+    margin-bottom: 16px;
+}
+
+.dv-empty-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 6px;
+}
+
+.dv-empty-sub {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.2);
+    margin-bottom: 20px;
+    max-width: 280px;
+    line-height: 1.55;
+}
+
+
+/* ── Form ── */
+
+.dv-form-wrap {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 28px;
+}
+
+.dv-form-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 20px;
+    letter-spacing: -0.2px;
+}
+
+.dv-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.dv-form-grid .dv-full {
+    grid-column: 1 / -1;
+}
+
+.dv-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dv-field label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+}
+
+.dv-field input,
+.dv-field select,
+.dv-field textarea {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 11px;
+    padding: 11px 14px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.8);
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    width: 100%;
+}
+
+.dv-field input::placeholder,
+.dv-field textarea::placeholder {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.dv-field input:focus,
+.dv-field select:focus,
+.dv-field textarea:focus {
+    border-color: rgba(249, 115, 22, 0.5);
+    background: rgba(249, 115, 22, 0.04);
+}
+
+.dv-field select option {
+    background: #0f1a2e;
+}
+
+.dv-field textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.55;
+}
+
+.dv-form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    margin-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dv-btn-save {
+    padding: 10px 26px;
+    border-radius: 11px;
+    border: none;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.28);
+}
+
+.dv-btn-save:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.38);
+}
+
+.dv-btn-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.dv-btn-cancel {
+    padding: 10px 22px;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.4);
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dv-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+
+/* ── Error / Loading ── */
+
+.dv-error {
+    padding: 12px 16px;
+    border-radius: 11px;
+    background: rgba(239, 68, 68, 0.07);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: rgba(252, 165, 165, 0.9);
+    font-size: 12.5px;
+    font-weight: 500;
+    margin-bottom: 16px;
+}
+
+.dv-loading-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.dv-skeleton {
+    height: 200px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    animation: dv-pulse 1.6s ease infinite;
+}
+
+@keyframes dv-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.45;
+    }
+}
+
+
+/* ── Footer info bar ── */
+
+.dv-info-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 32px;
+    padding: 18px 22px;
+    border-radius: 16px;
+    background: rgba(249, 115, 22, 0.05);
+    border: 1px solid rgba(249, 115, 22, 0.12);
+}
+
+.dv-info-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    background: rgba(249, 115, 22, 0.15);
+    color: rgba(249, 115, 22, 0.85);
+}
+
+
+/* Spinner */
+
+.dv-spinner {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #f97316;
+    animation: dv-spin 0.7s linear infinite;
+    display: inline-block;
+}
+
+@keyframes dv-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 640px) {
+    .dv-page {
+        padding: 24px 18px 48px;
+    }
+    .dv-form-grid {
+        grid-template-columns: 1fr;
+    }
+    .dv-form-grid .dv-full {
+        grid-column: 1;
+    }
+}

@@ -1,0 +1,297 @@
+/* ═══════════════════════════════════════════════════════════════
+   SUREFIX — FORM & UI ELEMENTS
+   Professional sizing reference applied:
+   - Input text: 1rem (16px) minimum — prevents iOS auto-zoom
+   - Touch targets: 44px minimum height (WCAG 2.5.5, Apple HIG)
+   - Spacing: 4px input→error, 20px field→field (visual grouping)
+   - Placeholder contrast: explicit color ≥3:1 on dark bg
+   ═══════════════════════════════════════════════════════════════ */
+
+
+/* ─── LABELS ─── */
+
+.sf-label {
+    display: block;
+    font-size: 0.8125rem;   /* 13px — labels can be smaller than input */
+    font-weight: 600;
+    color: var(--sf-text-2);
+    margin-bottom: 0.25rem; /* 4px — tight label→input grouping */
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+}
+
+
+/* ─── FORM GROUP (field unit: label + input + error) ─── */
+
+.sf-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem; /* 4px — tight: keeps label, input, and error tightly grouped */
+}
+
+/* 20px between separate field groups — clear separation */
+.sf-form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem; /* 20px */
+}
+
+
+/* ─── ERROR MESSAGES ─── */
+
+.sf-field-error {
+    font-size: 0.8125rem;
+    color: var(--sf-red);
+    margin-top: 0.25rem; /* 4px above error — stays close to its input */
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    line-height: 1.4;
+}
+
+
+/* ─── INPUTS, SELECTS, TEXTAREAS ─── */
+
+.sf-input,
+.sf-select,
+.sf-textarea {
+    width: 100%;
+    padding: 0.6875rem 0.875rem; /* 11px 14px → ~44px total height with line-height */
+    min-height: 2.75rem;         /* 44px — WCAG 2.5.5 minimum touch target */
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius);
+    background: var(--sf-bg);
+    color: var(--sf-text);
+    font-family: var(--font-sans);
+    font-size: 1rem;             /* 16px — prevents iOS auto-zoom on focus */
+    line-height: 1.5;
+    transition: border-color 0.2s var(--sf-ease), box-shadow 0.2s var(--sf-ease), background 0.2s var(--sf-ease);
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Placeholder — explicit color for contrast compliance (~3.2:1 on #080d17) */
+.sf-input::placeholder,
+.sf-select::placeholder,
+.sf-textarea::placeholder {
+    color: #6b7fa3;
+    font-weight: 400;
+    opacity: 1; /* Firefox reduces opacity by default — ensure full color */
+}
+
+.sf-input:hover,
+.sf-select:hover,
+.sf-textarea:hover {
+    border-color: var(--sf-border-hover);
+}
+
+.sf-input:focus,
+.sf-select:focus,
+.sf-textarea:focus {
+    outline: none;
+    border-color: var(--sf-blue);
+    background: var(--sf-bg-raised);
+    box-shadow: 0 0 0 3px rgba(45, 124, 246, 0.2);
+}
+
+/* Error state — color not the only indicator (WCAG 1.4.1) */
+.sf-input[aria-invalid="true"],
+.sf-select[aria-invalid="true"],
+.sf-textarea[aria-invalid="true"] {
+    border-color: var(--sf-red);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.sf-input[aria-invalid="true"]:focus,
+.sf-select[aria-invalid="true"]:focus,
+.sf-textarea[aria-invalid="true"]:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
+}
+
+/* Disabled state */
+.sf-input:disabled,
+.sf-select:disabled,
+.sf-textarea:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sf-textarea {
+    resize: vertical;
+    min-height: 6rem;
+    max-height: 12rem;
+    line-height: 1.6;
+}
+
+/* Select — custom caret */
+.sf-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%235c6e8a' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem 1rem;
+    padding-right: 2.5rem;
+    cursor: pointer;
+}
+
+
+/* ─── BUTTON VARIANTS ─── */
+/* All buttons enforce 44px min height for touch compliance */
+
+.btn-ghost {
+    background: transparent;
+    color: var(--sf-text-2);
+    border: 1px solid var(--sf-border);
+    min-height: 2.75rem;
+}
+
+.btn-ghost:hover {
+    background: var(--sf-surface-hover);
+    color: var(--sf-text);
+    border-color: var(--sf-border-hover);
+}
+
+.btn-danger {
+    background: var(--sf-red-muted);
+    color: var(--sf-red);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    min-height: 2.75rem;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+}
+
+.btn-status-green {
+    background: var(--sf-green-muted);
+    color: var(--sf-green);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    min-height: 2.75rem;
+}
+
+.btn-status-green:hover:not(:disabled) {
+    background: rgba(34, 197, 94, 0.25);
+}
+
+.btn-status-sky {
+    background: var(--sf-sky-muted);
+    color: var(--sf-sky);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    min-height: 2.75rem;
+}
+
+.btn-status-sky:hover:not(:disabled) {
+    background: rgba(56, 189, 248, 0.25);
+}
+
+.btn-status-red {
+    background: var(--sf-red-muted);
+    color: var(--sf-red);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    min-height: 2.75rem;
+}
+
+.btn-status-red:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+}
+
+
+/* ─── LAYOUT ─── */
+
+.sf-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem; /* 20px — correct field separation */
+}
+
+@media (max-width: 640px) {
+    .sf-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ─── TOPBAR ELEMENTS ─── */
+
+.sf-hamburger {
+    width: 2.75rem;  /* 44px */
+    height: 2.75rem; /* 44px */
+    border-radius: 10px;
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-border);
+    color: var(--sf-text-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s var(--sf-ease);
+}
+
+.sf-hamburger:hover {
+    background: var(--sf-surface-hover);
+    color: var(--sf-text);
+}
+
+.sf-tab {
+    padding: 0.625rem 1.25rem;
+    min-height: 2.75rem; /* 44px */
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--sf-radius-sm);
+    background: var(--sf-surface);
+    color: var(--sf-text-2);
+    border: 1px solid var(--sf-border);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.sf-tab.active,
+.sf-tab:hover {
+    background: var(--sf-bg-raised);
+    color: var(--sf-blue);
+    border-color: var(--sf-blue);
+}
+
+
+/* ─── ALERTS ─── */
+
+.sf-alert {
+    padding: 0.875rem 1rem;
+    border-radius: var(--sf-radius);
+    border: 1px solid transparent;
+    margin-bottom: 1.25rem; /* 20px */
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+.sf-alert-error {
+    background: var(--sf-red-muted);
+    color: var(--sf-red);
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
+.sf-alert-success {
+    background: var(--sf-green-muted);
+    color: var(--sf-green);
+    border-color: rgba(34, 197, 94, 0.25);
+}
+
+
+/* ─── SPINNER ─── */
+
+.sf-spinner {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--sf-border);
+    border-top-color: var(--sf-blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

@@ -6,6 +6,21 @@ A full-stack web platform that allows customers in Rwanda to book electronic rep
 
 ---
 
+## 🧩 Updated Problem Statement (MVP alignment)
+
+We are solving inefficiency in electronic device repair booking by delivering:
+- user registration and profile creation
+- device registration (smartphone, tablet, laptop, desktop)
+- location-based search and map discovery of nearby repair centres
+- service catalog with clear descriptions, pricing estimates, and repair time
+- real-time appointment slot availability and booking
+- email confirmations and status update notifications
+- appointment dashboard with view/cancel/modify
+
+No payments are processed in the system: customers and repair centres handle payment offline at the point of service.
+
+---
+
 ## 🏗️ Project Structure
 
 ```
@@ -35,7 +50,7 @@ surefix/
     │   ├── context/
     │   │   └── AuthContext.jsx    # Global auth state
     │   ├── utils/
-    │   │   └── api.js            # Axios API calls
+    │   │   └── axios.js          # Axios API client and interceptors
     │   ├── components/
     │   │   └── common/
     │   │       └── Navbar.jsx
@@ -164,6 +179,7 @@ npm start
 | GET | `/api/appointments/:id` | Single appointment | Yes |
 | POST | `/api/appointments` | Book appointment | Yes |
 | PATCH | `/api/appointments/:id/cancel` | Cancel appointment | Yes |
+| POST | `/api/appointments/:id/rate` | Rate a completed appointment | Yes |
 
 ### Services
 | Method | Endpoint | Description | Auth |
@@ -201,6 +217,14 @@ appointments (links all together)
   └── appointment_date, appointment_time
   └── status: pending|confirmed|in_progress|completed|cancelled
   └── booking_reference (unique, e.g. SFAB12CD34)
+
+notifications
+  └── notification_id (PK)
+  └── user_id (FK)
+  └── title
+  └── message
+  └── is_read (boolean)
+  └── created_at
 ```
 
 ---

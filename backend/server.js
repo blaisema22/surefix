@@ -1,74 +1,133 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-require('dotenv').config({ path: __dirname + '/.env' });
-
-const { testConnection } = require('./config/db');
-const authRoutes = require('./routes/auth');
-const deviceRoutes = require('./routes/devices');
-const centreRoutes = require('./routes/centres');
-const appointmentRoutes = require('./routes/appointments');
-const serviceRoutes = require('./routes/services');
+const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+const initCronJobs = require('./cron-jobs');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const server = http.createServer(app); // Wrap express app with HTTP server
 
-// ─── Security middleware ───────────────────────────────────
+// --- Middleware ---
+app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000' }));
 app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
-}));
-
-// ─── Rate limiting ─────────────────────────────────────────
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
-  max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many requests. Please try again later.' },
-});
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { success: false, message: 'Too many auth attempts. Please try again in 15 minutes.' },
-});
-
-app.use(limiter);
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ─── Routes ───────────────────────────────────────────────
-app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/devices', deviceRoutes);
-app.use('/api/centres', centreRoutes);
-app.use('/api/appointments', appointmentRoutes);
-app.use('/api/services', serviceRoutes);
-
-// ─── Health check ─────────────────────────────────────────
-app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'SureFix API is running', timestamp: new Date().toISOString() });
+// --- Socket.io Setup ---
+const io = new Server(server, {
+    cors: {
+        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+        methods: ["GET", "POST"]
+    }
 });
 
-// ─── 404 handler ──────────────────────────────────────────
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: `Route ${req.method} ${req.path} not found.` });
+// Store active socket connections if needed, or just join rooms based on User ID
+io.on('connection', (socket) => {
+    // console.log('New client connected:', socket.id);
+
+    // Allow client to join a private room named "user_{userId}"
+    socket.on('join_room', (userId) => {
+        if (userId) {
+            socket.join(`user_${userId}`);
+            // console.log(`Socket ${socket.id} joined room user_${userId}`);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        // console.log('Client disconnected:', socket.id);
+    });
 });
 
-// ─── Global error handler ─────────────────────────────────
+// Make io accessible in all routes via req.io
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+});
+
+// --- Secure File Serving for Uploads ---
+app.get('/uploads/:filename', async (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, 'uploads', filename);
+
+    // 1. Check if file exists
+    const fs = require('fs');
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).send('File not found');
+    }
+
+    // 2. Public Assets (Shop Logos)
+    // Shop logos are public so they can be seen in search results
+    if (filename.startsWith('shop-')) {
+        return res.sendFile(filePath);
+    }
+
+    // 3. Protected Assets (Appointment Images)
+    if (filename.startsWith('appointment-')) {
+        // Allow token via Header OR Query Param (useful for <img src="...?token=..."/>)
+        const token = req.headers.authorization?.split(' ')[1] || req.query.token;
+
+        if (!token) return res.status(401).send('Unauthorized: No token provided');
+
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'surefix_secret_key_change_in_production');
+
+            // Admins can view everything
+            if (decoded.role === 'admin') return res.sendFile(filePath);
+
+            // Check ownership in Database
+            const { pool } = require('./config/db');
+
+            // DB stores paths like "uploads/appointment-123.jpg", match partial filename
+            const dbPathLike = `%${filename}`;
+
+            const [rows] = await pool.query(`
+                SELECT a.user_id, rc.owner_id 
+                FROM appointments a
+                JOIN repair_centres rc ON a.centre_id = rc.centre_id
+                WHERE a.issue_image_url LIKE ?
+            `, [dbPathLike]);
+
+            if (rows.length > 0) {
+                const access = rows[0];
+                // Allow if user is the Customer OR the Shop Owner
+                if (access.user_id === decoded.userId || access.owner_id === decoded.userId) {
+                    return res.sendFile(filePath);
+                }
+            }
+            return res.status(403).send('Forbidden: You do not have permission to view this file');
+        } catch (err) {
+            return res.status(401).send('Unauthorized: Invalid token');
+        }
+    }
+
+    // Default deny for unknown file types
+    res.status(403).send('Access denied');
+});
+
+// --- API Routes ---
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/devices', require('./routes/devices'));
+app.use('/api/centres', require('./routes/centres'));
+app.use('/api/appointments', require('./routes/appointments'));
+app.use('/api/services', require('./routes/services'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/reviews', require('./routes/reviews'));
+app.use('/api/admin', require('./routes/admin'));
+
+// --- Basic Error Handling ---
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ success: false, message: 'Internal server error.' });
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
 });
 
-// ─── Start server ─────────────────────────────────────────
-async function start() {
-  await testConnection();
-  app.listen(PORT, () => {
-    console.log(`🚀 SureFix API running on http://localhost:${PORT}`);
-    console.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
-  });
-}
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-start();
+// Initialize Cron Jobs
+initCronJobs();
+
+module.exports = app; // For supertest
