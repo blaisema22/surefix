@@ -1,3 +1,16 @@
+# Root level junk files
+/*.js
+/*.jsx
+/*.css
+/*.html
+/*.txt
+/query
+
+# Keep specific root files if needed
+!/README.md
+!/package.json
+!/package-lock.json
+
 # Dependencies
 node_modules/
 backend/node_modules/
@@ -7,23 +20,13 @@ frontend/node_modules/
 build/
 dist/
 coverage/
-frontend/build/
-frontend/dist/
-backend/build/
-backend/dist/
+*/build/
+*/dist/
 
 # Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-backend/.env
-frontend/.env
-
-# Keep example env templates
-!backend/.env.example
-!frontend/.env.example
+.env*
+*/.env*
+!*/.env.example
 
 # Logs
 logs/
