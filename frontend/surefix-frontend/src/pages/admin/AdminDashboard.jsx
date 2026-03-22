@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
+import AdminLayout from '../../components/layout/AdminLayout';
+import AdminAnalytics from './AdminAnalytics';
 import {
     ShieldCheck, CheckCircle, XCircle, MapPin,
     Phone, Search, Loader2, AlertCircle, Filter,
@@ -84,11 +86,16 @@ const AdminDashboard = () => {
     };
 
     if (loading && centres.length === 0 && !analytics) {
-        return <div className="min-h-screen bg-[#0B0F1A] text-white flex justify-center items-center"><Loader2 className="animate-spin mr-2" /> Loading Admin Portal...</div>;
+        return (
+            <AdminLayout>
+                <div className="h-full flex justify-center items-center text-white"><Loader2 className="animate-spin mr-2" /> Loading Admin Portal...</div>
+            </AdminLayout>
+        );
     }
 
     return (
-        <div className="min-h-screen bg-[#0B0F1A] text-white p-6">
+        <AdminLayout>
+            <div className="text-white p-6">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
@@ -127,6 +134,9 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 )}
+
+                    {/* Charts Section */}
+                    <AdminAnalytics analytics={analytics} />
 
                 {error && (
                     <div className="bg-red-900/20 border border-red-500/50 text-red-200 p-4 rounded-lg mb-6 flex items-center gap-2">
@@ -211,6 +221,7 @@ const AdminDashboard = () => {
                 </div>
             </div>
         </div>
+        </AdminLayout>
     );
 };
 

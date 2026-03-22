@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const auth = require('../middleware/auth');
+const bcrypt = require('bcryptjs');
 
 // Middleware to verify admin privileges
 const verifyAdmin = (req, res, next) => {
@@ -174,6 +175,50 @@ router.get('/analytics', auth, verifyAdmin, async (req, res) => {
     } catch (err) {
         console.error('Error fetching analytics:', err);
         res.status(500).json({ success: false, message: 'Server error fetching analytics.' });
+    }
+});
+
+// @route   POST /api/admin/users
+// @desc    Manually create a new user account
+// @access  Admin
+router.post('/users', auth, verifyAdmin, async (req, res) => {
+    const { name, email, password, role, phone, is_verified } = req.body;
+
+    if (!name || !email || !password || !role) {
+        return res.status(400).json({ success: false, message: 'Please provide name, email, password, and role.' });
+    }
+
+    if (password.length < 6) {
+        return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    }
+
+    try {
+        // Check if user exists
+        const [existing] = await pool.query('SELECT user_id FROM users WHERE email = ?', [email]);
+        if (existing.length > 0) {
+            return res.status(400).json({ success: false, message: 'User with this email already exists.' });
+        }
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Default verification to true if not specified, since admin is creating it
+        const verifiedStatus = is_verified !== undefined ? (is_verified ? 1 : 0) : 1;
+
+        const [result] = await pool.query(
+            'INSERT INTO users (name, email, password_hash, role, phone, is_verified, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+            [name, email, hashedPassword, role, phone || null, verifiedStatus]
+        );
+
+        res.status(201).json({
+            success: true,
+            message: 'User created successfully.',
+            user: { user_id: result.insertId, name, email, role, is_verified: !!verifiedStatus }
+        });
+    } catch (err) {
+        console.error('Error creating user:', err);
+        res.status(500).json({ success: false, message: 'Server error while creating user.' });
     }
 });
 

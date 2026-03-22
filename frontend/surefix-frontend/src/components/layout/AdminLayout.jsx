@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { ShieldCheck, Users, LogOut, LayoutDashboard } from 'lucide-react';
 
-const AdminLayout = () => {
+const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -72,7 +72,7 @@ const AdminLayout = () => {
 
             {/* Main Content Area */}
             <main className="flex-1 overflow-y-auto relative bg-[#0B0F1A] scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
-                <Outlet />
+                {children || <Outlet />}
             </main>
         </div>
     );
