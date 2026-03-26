@@ -217,7 +217,6 @@ const styles = `
 .frd-service-row:hover { border-color: rgba(249,115,22,0.2); }
 .frd-service-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75); }
 .frd-service-cat  { font-size: 10px; font-weight: 600; letter-spacing: 0.7px; text-transform: uppercase; color: rgba(255,255,255,0.2); margin-top: 2px; }
-.frd-service-price { font-size: 13px; font-weight: 700; color: #f97316; white-space: nowrap; }
 
 /* CTA card in panel */
 .frd-cta-card {
@@ -473,9 +472,6 @@ const FindRepairDashboard = () => {
                                             <div>
                                                 <div className="frd-service-name">{s.service_name}</div>
                                                 <div className="frd-service-cat">{s.device_category}</div>
-                                            </div>
-                                            <div className="frd-service-price">
-                                                {s.base_price ? `${Number(s.base_price).toLocaleString()} RWF` : 'Inquire'}
                                             </div>
                                         </div>
                                     ))

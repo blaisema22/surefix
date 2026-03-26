@@ -179,6 +179,22 @@ const S = `
     color:rgba(255,255,255,0.3); cursor:pointer; transition:all .2s;
   }
   .dp-refresh:hover { background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.6); border-color:rgba(255,255,255,0.12); }
+
+  /* ── Mobile Layout Fixes ── */
+  @media (max-width: 1024px) {
+    .dp-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .dp-main-grid { grid-template-columns: 1fr !important; }
+  }
+  @media (max-width: 768px) {
+    .dp-actions-grid { grid-template-columns: 1fr !important; }
+    .dp-stats-grid { gap: 12px !important; }
+    .dp-card { overflow-x: auto !important; }
+  }
+  @media (max-width: 480px) {
+    .dp-stats-grid { grid-template-columns: 1fr !important; }
+    .dp-header-actions { flex-direction: column !important; align-items: flex-start !important; }
+    .dp-root-container { padding: 24px 16px 60px !important; }
+  }
 `;
 
 /* ── status badge helper ── */
@@ -299,7 +315,7 @@ const DashboardPage = () => {
   return (
     <>
       <style>{S}</style>
-      <div className="dp-root" style={{ maxWidth: 1100, margin: '0 auto', padding: '36px 28px 60px' }}>
+      <div className="dp-root dp-root-container" style={{ maxWidth: 1100, margin: '0 auto', padding: '36px 28px 60px' }}>
 
         {/* ── Header ── */}
         <header style={{ marginBottom: 36 }}>
@@ -315,7 +331,7 @@ const DashboardPage = () => {
                 Here's a full overview of your repair activity.
               </p>
             </div>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <div className="dp-header-actions" style={{ display:'flex', alignItems:'center', gap:8 }}>
               <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 16px', borderRadius:24, background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.18)' }}>
                 <span className="dp-dot" />
                 <span style={{ fontSize:11, fontWeight:600, color:'rgba(74,222,128,0.8)', letterSpacing:'.5px' }}>All systems live</span>
@@ -329,7 +345,7 @@ const DashboardPage = () => {
         </header>
 
         {/* ── Stat Cards ── */}
-        <div className="dp-stagger" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:32 }}>
+        <div className="dp-stagger dp-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:32 }}>
           <StatCard
             value={stats.active}     label="Active Repairs"
             icon={Wrench}            colorClass="dp-stat-blue"
@@ -359,7 +375,7 @@ const DashboardPage = () => {
         {/* ── Quick Actions ── */}
         <div style={{ marginBottom:32 }}>
           <p className="dp-section-lbl">Quick Actions</p>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
+          <div className="dp-actions-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
             <Link to="/find-repair" className="dp-action-primary">
               <div style={{ width:38, height:38, borderRadius:11, background:'rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                 <Search size={18} />
@@ -391,7 +407,7 @@ const DashboardPage = () => {
         </div>
 
         {/* ── Main Grid ── */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 320px', gap:20, alignItems:'start' }}>
+        <div className="dp-main-grid" style={{ display:'grid', gridTemplateColumns:'1fr 320px', gap:20, alignItems:'start' }}>
 
           {/* Recent Appointments */}
           <div className="dp-card">

@@ -7,6 +7,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const initCronJobs = require('./cron-jobs');
+const logger = require('./utils/logger');
+const { errorMiddleware } = require('./middleware/errorMiddleware');
 
 const app = express();
 const server = http.createServer(app); // Wrap express app with HTTP server
@@ -117,15 +119,20 @@ app.use('/api/services', require('./routes/services'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/sms', require('./routes/sms'));
 
-// --- Basic Error Handling ---
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Something broke!');
+// --- Error Handling ---
+// 404 handler
+app.all('*', (req, res, next) => {
+    const { AppError } = require('./middleware/errorMiddleware');
+    next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
+// Global error middleware
+app.use(errorMiddleware);
+
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => logger.info(`Server running on port ${PORT}`));
 
 // Initialize Cron Jobs
 initCronJobs();

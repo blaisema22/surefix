@@ -26,7 +26,7 @@ const Feedback = ({ success, error }) => (
 
 /* ── Profile Form ── */
 const ProfileUpdateForm = () => {
-    const { user, setUser } = useAuth();
+    const { user, updateUser } = useAuth();
     const [form, setForm] = useState({ name: user.name, phone: user.phone || '' });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
@@ -40,7 +40,7 @@ const ProfileUpdateForm = () => {
         try {
             const res = await api.put('/auth/profile', form);
             if (res.data.success) {
-                setUser(p => ({ ...p, ...form }));
+                updateUser(form);
                 setSuccess('Profile updated successfully!');
                 setTimeout(() => setSuccess(null), 3000);
             }
@@ -214,7 +214,7 @@ export default function CustomerProfile() {
                 </div>
 
                 {/* Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         <div className="sf-anim-up sf-s1"><ProfileUpdateForm /></div>
                         <div className="sf-anim-up sf-s2"><NotificationSettings /></div>

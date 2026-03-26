@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Calendar, Smartphone, Search, Bell, Users,
   Wrench, Store, Settings, LogOut, X, ChevronDown, User,
-  CalendarPlus,
+  CalendarPlus, MessageSquare
 } from 'lucide-react';
 
 /* ── Nav items per role ── */
@@ -21,6 +21,7 @@ const CUSTOMER_NAV = [
     group: 'Personal',
     items: [
       { path: '/devices', label: 'My Hardware', icon: Smartphone },
+      { path: '/customer/sms-inbox', label: 'SMS Inbox', icon: MessageSquare },
       { path: '/notifications', label: 'Repair Updates', icon: Bell },
       { path: '/settings', label: 'Settings', icon: Settings },
     ],

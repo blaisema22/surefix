@@ -328,18 +328,17 @@ router.post('/my/services', authMiddleware, [
         }
 
         const centreId = centres[0].centre_id;
-        const { service_name, description, device_category, estimated_duration_minutes, base_price, is_available } = req.body;
+        const { service_name, description, device_category, estimated_duration_minutes, is_available } = req.body;
 
         const [result] = await pool.query(
             `INSERT INTO services 
-            (centre_id, service_name, description, device_category, estimated_duration_minutes, base_price, is_available) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)`, [
+            (centre_id, service_name, description, device_category, estimated_duration_minutes, is_available) 
+            VALUES (?, ?, ?, ?, ?, ?)`, [
             centreId,
             service_name,
             description || '',
             device_category,
             estimated_duration_minutes,
-            base_price || null,
             is_available !== undefined ? is_available : true
         ]);
 
@@ -377,7 +376,7 @@ router.put('/my/services/:id', authMiddleware, [
             return res.status(404).json({ success: false, message: 'Service not found or unauthorized' });
         }
 
-        const { service_name, description, device_category, estimated_duration_minutes, base_price, is_available } = req.body;
+        const { service_name, description, device_category, estimated_duration_minutes, is_available } = req.body;
 
         await pool.query(
             `UPDATE services SET
@@ -385,14 +384,12 @@ router.put('/my/services/:id', authMiddleware, [
                 description = COALESCE(?, description),
                 device_category = COALESCE(?, device_category),
                 estimated_duration_minutes = COALESCE(?, estimated_duration_minutes),
-                base_price = ?,
                 is_available = COALESCE(?, is_available)
             WHERE service_id = ?`, [
             service_name || null,
             description !== undefined ? description : null,
             device_category || null,
             estimated_duration_minutes || null,
-            base_price !== undefined && base_price !== '' ? base_price : null,
             is_available !== undefined ? is_available : null,
             serviceId
         ]);

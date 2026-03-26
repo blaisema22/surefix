@@ -2,6 +2,8 @@ import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { RefreshCw } from 'lucide-react';
+import NotificationListener from '../shared/NotificationListener';
+import SmsSimulator from '../shared/SmsSimulator';
 
 const ShopLayout = () => {
     const { user, loading } = useAuth();
@@ -22,7 +24,13 @@ const ShopLayout = () => {
     }
 
     // If authorized, render the child routes (Dashboard, Services, etc.)
-    return <Outlet />;
+    return (
+        <>
+            <NotificationListener />
+            <SmsSimulator />
+            <Outlet />
+        </>
+    );
 };
 
 export default ShopLayout;

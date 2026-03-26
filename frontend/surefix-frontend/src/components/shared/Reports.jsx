@@ -10,13 +10,15 @@ const CustomTooltip = ({ active, payload, label }) => {
             <div className="bg-[#0F172A] border border-slate-700 p-3 rounded-lg shadow-xl backdrop-blur-md">
                 <p className="text-slate-200 font-bold mb-2 text-sm">{label}</p>
                 {payload.map((entry, index) => (
-                    <div key={index} className="flex items-center gap-3 text-xs mb-1 last:mb-0">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.name === 'Revenue' ? '#10b981' : '#3b82f6' }} />
-                        <span className="text-slate-400">{entry.name}:</span>
-                        <span className="text-white font-bold ml-auto">
-                            {entry.name === 'Revenue' ? `${entry.value.toLocaleString()} Rwf` : entry.value}
-                        </span>
-                    </div>
+                    entry.name !== 'Revenue' && (
+                        <div key={index} className="flex items-center gap-3 text-xs mb-1 last:mb-0">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
+                            <span className="text-slate-400">{entry.name}:</span>
+                            <span className="text-white font-bold ml-auto">
+                                {entry.value}
+                            </span>
+                        </div>
+                    )
                 ))}
             </div>
         );
@@ -47,7 +49,7 @@ const ShopReports = () => {
                 const data = Array(12).fill(0).map((_, i) => {
                     const d = new Date();
                     d.setMonth(d.getMonth() - i);
-                    return { name: monthNames[d.getMonth()], appointments: 0, revenue: 0 };
+                    return { name: monthNames[d.getMonth()], appointments: 0 };
                 }).reverse();
 
                 if (response.data.reports.monthly_appointments) {
@@ -55,7 +57,6 @@ const ShopReports = () => {
                         const idx = data.findIndex(m => m.name === item.month);
                         if (idx !== -1) {
                             data[idx].appointments = item.count;
-                            data[idx].revenue = item.revenue;
                         }
                     });
                 }
@@ -137,13 +138,7 @@ const ShopReports = () => {
 
             {reports && (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
-                        <StatCard
-                            value={`Rwf ${Number(reports.total_revenue || 0).toLocaleString()}`}
-                            label="Total Revenue"
-                            icon={DollarSign}
-                            color="#10b981"
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                         <StatCard
                             value={reports.total_appointments || 0}
                             label="Total Appointments"
@@ -166,7 +161,7 @@ const ShopReports = () => {
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                         <div className="bg-sf-card p-8 rounded-lg border border-sf-border">
-                            <h3 className="text-xl font-bold text-white mb-6">Monthly Appointments & Revenue</h3>
+                            <h3 className="text-xl font-bold text-white mb-6">Monthly Appointments</h3>
                             <div className="h-80">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={monthlyData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }} barGap={8}>
@@ -175,19 +170,13 @@ const ShopReports = () => {
                                                 <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
                                                 <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.3} />
                                             </linearGradient>
-                                            <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
-                                                <stop offset="100%" stopColor="#10b981" stopOpacity={0.3} />
-                                            </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} opacity={0.4} />
                                         <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} dy={10} />
                                         <YAxis yAxisId="left" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-                                        <YAxis yAxisId="right" orientation="right" stroke="#10b981" fontSize={12} tickLine={false} axisLine={false} unit=" Rwf" />
                                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#374151', opacity: 0.2 }} />
                                         <Legend wrapperStyle={{ fontSize: 12, color: '#9ca3af', paddingTop: '20px' }} />
                                         <Bar yAxisId="left" dataKey="appointments" fill="url(#apptGrad)" name="Appointments" radius={[4, 4, 0, 0]} barSize={20} animationDuration={1500} />
-                                        <Bar yAxisId="right" dataKey="revenue" fill="url(#revGrad)" name="Revenue" radius={[4, 4, 0, 0]} barSize={20} animationDuration={1500} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>

@@ -72,7 +72,7 @@ const PublicNavbar = () => {
                     <NavLink href="/support">Support</NavLink>
                 </div>
 
-                {user ? (
+                {user && location.pathname !== '/' ? (
                     <div className="sf-desktop-group" style={{ gap: 20 }}>
                         <Link to="/notifications" style={{ position: 'relative', color: 'var(--sf-text-2)', display: 'flex', alignItems: 'center' }}
                             onMouseEnter={e => e.currentTarget.style.color = 'var(--sf-white)'}
@@ -110,7 +110,7 @@ const PublicNavbar = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>
                             <NavLink href="/find-centres">Find Centers</NavLink>
                             <NavLink href="/support">Support</NavLink>
-                            {user ? (
+                            {user && location.pathname !== '/' ? (
                                 <NavLink href="/dashboard">Dashboard</NavLink>
                             ) : (
                                 <NavLink href="/login">Sign In</NavLink>

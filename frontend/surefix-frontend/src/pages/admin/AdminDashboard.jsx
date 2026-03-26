@@ -5,7 +5,7 @@ import AdminAnalytics from './AdminAnalytics';
 import {
     ShieldCheck, CheckCircle, XCircle, MapPin,
     Phone, Search, Loader2, AlertCircle, Filter,
-    Mail, User, DollarSign, Calendar
+    Mail, User, Calendar
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -119,11 +119,7 @@ const AdminDashboard = () => {
 
                 {/* Analytics Overview */}
                 {analytics && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div className="bg-[#1F2937] p-6 rounded-lg border border-gray-700 shadow-lg">
-                            <h3 className="text-gray-400 text-sm font-medium uppercase flex items-center gap-2"><DollarSign size={16} /> Total Revenue</h3>
-                            <p className="text-2xl font-bold text-green-400 mt-2">RWF {Number(analytics.total_revenue || 0).toLocaleString()}</p>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <div className="bg-[#1F2937] p-6 rounded-lg border border-gray-700 shadow-lg">
                             <h3 className="text-gray-400 text-sm font-medium uppercase flex items-center gap-2"><Calendar size={16} /> Appointments</h3>
                             <p className="text-2xl font-bold text-blue-400 mt-2">{Number(analytics.total_appointments || 0).toLocaleString()}</p>

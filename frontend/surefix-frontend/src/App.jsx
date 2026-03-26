@@ -23,7 +23,8 @@ import ManageDevices from './pages/customer/ManageDevices';
 import AppointmentsPage from './pages/customer/AppointmentsPage';
 import BookRepair from './pages/customer/BookRepair';
 import BookingPage from './pages/customer/BookingPage';
-import CustomerProfile from './pages/customer/Profile';
+import SmsInbox from './pages/customer/SmsInbox';
+// import CustomerProfile from './pages/customer/Profile'; (Deprecated)
 import ProfilePage from './pages/ProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -38,6 +39,7 @@ import ShopProfile from './pages/shop/ShopProfile';
 
 // Shared
 import NotificationListener from './components/shared/NotificationListener';
+import SmsSimulator from './components/shared/SmsSimulator';
 
 // Admin Pages
 import AdminUsers from './pages/admin/Users';
@@ -58,7 +60,6 @@ const Root = () => (
     <SocketProvider>
       <NotificationProvider>
         <ToastProvider>
-          <NotificationListener />
           <Outlet />
         </ToastProvider>
       </NotificationProvider>
@@ -105,9 +106,11 @@ const router = createBrowserRouter([
         children: [
           { path: "/dashboard", element: <DashboardSwitcher /> },
           { path: "/profile", element: <ProfilePage /> },
-          { path: "/settings", element: <CustomerProfile /> },
+          { path: "/settings", element: <ProfilePage /> },
           { path: "/devices", element: <ManageDevices /> },
           { path: "/notifications", element: <NotificationsPage /> },
+          { path: "/sms", element: <SmsInbox /> },
+          { path: "/messages", element: <SmsInbox /> },
           { path: "/book-repair/:centreId", element: <BookRepair /> },
           { path: "/booking", element: <BookingPage /> },
           { path: "/appointments", element: <AppointmentsPage /> },

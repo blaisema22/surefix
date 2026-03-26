@@ -1,7 +1,20 @@
-Starting test...
-DB module loaded
-Testing connection...
-✅ Connected to MySQL
-Tables: [{"Tables_in_surefix_db":"appointments"},{"Tables_in_surefix_db":"devices"},{"Tables_in_surefix_db":"repair_centres"},{"Tables_in_surefix_db":"services"},{"Tables_in_surefix_db":"users"}]
-Centres found: 5
-Test completed successfully!
+≡ƒº¬ Full SMS Test Suite - SureFix
+
+1∩╕ÅΓâú Testing basic sendSMS...
+[SMS] Simulator DB error: 
+[SMS] Γ£à Real SMS sent to +250781234567 ΓÇö SID: SM7ecd8381e02ca313bc92900c714a55e4
+
+2∩╕ÅΓâú Testing appointment SMS service...
+[SMS] Simulator DB error: 
+[SMS] Γ£à Real SMS sent to +250781234567 ΓÇö SID: SMf2ad51d7acf096f409babec7935f0386
+[SMS] Simulator DB error: 
+[SMS] Γ£à Real SMS sent to +250789876543 ΓÇö SID: SMfc20d9cfb09aaf06cfe0263309006666
+[SMS] Simulator DB error: 
+[SMS] Γ£à Real SMS sent to +250781234567 ΓÇö SID: SM992437c33fcad203b704d524d08fb782
+[SMS] Simulator DB error: 
+[SMS] Γ£à Real SMS sent to +250781234567 ΓÇö SID: SM07cc9ec6b84681ab17dd30602b2e3c5d
+[SMS] Simulator DB error: 
+[SMS] Γ£à Real SMS sent to +250781234567 ΓÇö SID: SM64d78cec67d38a5ea2bf1916853c0156
+[SMS] Simulator DB error: 
+[SMS] Γ£à Real SMS sent to +250781234567 ΓÇö SID: SMb14ec35740098439cc51b5a6cf5d3837
+Γ¥î Test failed: 

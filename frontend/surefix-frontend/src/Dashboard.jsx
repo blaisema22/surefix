@@ -143,7 +143,7 @@ const AdminDashboard = () => {
                             <Calendar size={20} />
                         </div>
                         <h3 className="text-slate-300 font-semibold">Detailed Analytics</h3>
-                        <p className="text-slate-500 text-sm max-w-md">Detailed growth charts and revenue analytics will appear here as more data is collected by the system.</p>
+                        <p className="text-slate-500 text-sm max-w-md">Detailed growth charts and appointment analytics will appear here as more data is collected by the system.</p>
                     </div>
 
                 </main>

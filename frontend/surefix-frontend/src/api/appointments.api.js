@@ -39,8 +39,14 @@ export const cancelMyAppointment = async(id) => {
 
 export const cancelAppointment = cancelMyAppointment;
 
-export const updateAppointmentStatus = async(id, status) => {
-    const response = await api.patch(`/appointments/${id}/status`, { status });
+export const updateAppointmentStatus = async(id, statusPayload) => {
+    if (statusPayload instanceof FormData) {
+        const response = await api.patch(`/appointments/${id}/status`, statusPayload, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+    }
+    const response = await api.patch(`/appointments/${id}/status`, { status: statusPayload });
     return response.data;
 };
 

@@ -1,11 +1,20 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+// ─── ShopCustomers.jsx ───────────────────────────────────────────────────────
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyCustomers } from '../../api/shop';
+import { Search, Download, RefreshCw, Users, ChevronRight, Mail, Phone } from 'lucide-react';
+import '../../styles/sf-pages.css';
 
-const ShopCustomers = () => {
+const FILTERS = [
+    { key: 'all', label: 'All' },
+    { key: 'recent', label: 'Recent' },
+    { key: 'frequent', label: 'Frequent' },
+];
+
+export const ShopCustomers = () => {
     const navigate = useNavigate();
     const [customers, setCustomers] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [filter, setFilter] = useState('all');
@@ -13,178 +22,132 @@ const ShopCustomers = () => {
     const load = useCallback(async () => {
         try {
             setLoading(true); setError(null);
-            const res = await getMyCustomers(); // This now returns response.data directly
-            if (res?.success) {
-                setCustomers(res.customers ?? []);
-            } else throw new Error(res?.message ?? 'Failed.');
-        } catch (err) {
-            setError(err.message ?? 'Failed to load customers.');
-        } finally { setLoading(false); }
-    }, []);
+          const res = await getMyCustomers();
+          if (res?.success) setCustomers(res.customers ?? []);
+          else throw new Error(res?.message ?? 'Failed to load customers.');
+      } catch (err) { setError(err.message ?? 'Failed to load customers.'); }
+      finally { setLoading(false); }
+  }, []);
 
     useEffect(() => { load(); }, [load]);
 
-    const filteredCustomers = useMemo(() => {
+    const filtered = useMemo(() => {
         let data = [...customers];
-
-        // 1. Filter by Search Term
-        if (searchTerm.trim()) {
-            const lower = searchTerm.toLowerCase();
-            data = data.filter(c => c.name?.toLowerCase().includes(lower) || c.email?.toLowerCase().includes(lower));
-        }
-
-        // 2. Sort and Slice based on Tab
-        if (filter === 'recent') {
-            data.sort((a, b) => new Date(b.last_appointment) - new Date(a.last_appointment));
-            if (!searchTerm.trim()) data = data.slice(0, 20); // Only limit if not searching
-        } else if (filter === 'frequent') {
-            data.sort((a, b) => b.total_bookings - a.total_bookings);
-            if (!searchTerm.trim()) data = data.slice(0, 20);
-        }
-
-        return data;
-    }, [customers, filter, searchTerm]);
+      if (search.trim()) {
+          const q = search.toLowerCase();
+          data = data.filter(c => c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q));
+      }
+      if (filter === 'recent') { data.sort((a, b) => new Date(b.last_appointment) - new Date(a.last_appointment)); if (!search.trim()) data = data.slice(0, 20); }
+      if (filter === 'frequent') { data.sort((a, b) => b.total_bookings - a.total_bookings); if (!search.trim()) data = data.slice(0, 20); }
+      return data;
+  }, [customers, filter, search]);
 
     const handleExport = () => {
-        if (filteredCustomers.length === 0) return;
-
-        const headers = ['Name', 'Email', 'Phone', 'Total Bookings', 'Last Visit'];
-        const rows = filteredCustomers.map(c => [
-            `"${c.name}"`,
-            c.email,
-            c.phone || '',
-            c.total_bookings,
-            new Date(c.last_appointment).toLocaleDateString()
-        ]);
-
-        const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `customers_export_${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-    };
-
-    const FILTERS = [
-        { key: 'all', label: 'All Customers' },
-        { key: 'recent', label: 'Recent Visitors' },
-        { key: 'frequent', label: 'Most Frequent' },
-    ];
+      if (!filtered.length) return;
+      const headers = ['Name', 'Email', 'Phone', 'Total Bookings', 'Last Visit'];
+      const rows = filtered.map(c => [`"${c.name}"`, c.email, c.phone || '', c.total_bookings, new Date(c.last_appointment).toLocaleDateString()]);
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = `customers_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+  };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-            <main style={{ width: '100%', maxWidth: 940, padding: '36px 40px', paddingBottom: 100 }}>
-                {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 28 }} className="sf-anim-up">
-                    <div>
-                        <span className="sf-eyebrow">Clientele</span>
-                        <h1 className="sf-page-title">Customers</h1>
-                        <p className="sf-page-sub">Users who have booked appointments with your centre.</p>
-                    </div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Search name or email..."
-                            className="sf-input"
-                            style={{ padding: '8px 12px', minWidth: '250px', fontSize: '0.9rem' }}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <button className="btn btn-secondary btn-sm" onClick={handleExport} disabled={filteredCustomers.length === 0} title="Export CSV">
-                        <i className="fa-solid fa-download"></i>
-                    </button>
-                    <button className="btn btn-secondary btn-sm" onClick={load} disabled={loading}>
-                        <i className="fa-solid fa-arrows-rotate mr-1"></i>
-                    </button>
-                </div>
-            </div>
+      <div className="sf-page" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <div className="sf-page-wrap">
 
-            {/* Filter tabs */}
-            <div className="sf-tabs" style={{ marginBottom: 24, width: 'fit-content' }}>
-                {FILTERS.map(({ key, label }) => (
-                    <button
-                        key={key}
-                        className={`sf-tab ${filter === key ? 'active' : ''}`}
-                        onClick={() => setFilter(key)}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
+              {/* Header */}
+              <div className="sf-anim-up" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>
+                  <div>
+                      <span className="sf-eyebrow">Clientele</span>
+                      <h1 className="sf-page-title">Customers</h1>
+                      <p className="sf-page-sub">Users who have booked with your repair centre.</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                      <div className="sf-search-wrap" style={{ margin: 0, width: 220 }}>
+                          <Search size={15} className="sf-search-icon" />
+                          <input className="sf-search-input" placeholder="Search name or email…" value={search} onChange={e => setSearch(e.target.value)} />
+                      </div>
+                      <button className="sf-btn-ghost" onClick={handleExport} disabled={!filtered.length} title="Export CSV">
+                          <Download size={14} />
+                      </button>
+                      <button className="sf-btn-ghost" onClick={load} disabled={loading}>
+                          <RefreshCw size={14} className={loading ? 'sf-spinner' : ''} />
+                      </button>
+                  </div>
+              </div>
 
-            {error && <div className="sf-alert sf-alert-error" style={{ marginBottom: 20 }}>{error}</div>}
+              {/* Filter tabs */}
+              <div className="sf-filter-bar sf-anim-up sf-s1">
+                  {FILTERS.map(f => (
+                      <button key={f.key} className={`sf-filter-btn ${filter === f.key ? 'active' : ''}`} onClick={() => setFilter(f.key)}>
+                          {f.label}
+                      </button>
+                  ))}
+              </div>
 
-            {loading ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {[...Array(5)].map((_, i) => (
-                        <div key={i} className="sf-skeleton" style={{ height: 68, borderRadius: 12 }} />
-                    ))}
-                </div>
-            ) : filteredCustomers.length === 0 ? (
-                <div className="sf-empty">
-                    <div className="sf-empty-icon"><i className="fa-solid fa-magnifying-glass"></i></div>
-                    <div className="sf-empty-title">No customers found</div>
-                    <div className="sf-empty-desc">Try adjusting your search or filters.</div>
-                </div>
-            ) : (
-                <div className="sf-table-wrap">
-                    <table className="sf-table">
-                        <thead>
-                            <tr>
-                                <th>Customer</th>
-                                <th>Contact</th>
-                                <th>Bookings</th>
-                                <th>Last Visit</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredCustomers.map(c => (
-                                <tr key={c.user_id} className="hover:bg-white/5 transition-colors">
-                                    <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            <div style={{
-                                                width: 34, height: 34, borderRadius: 10,
-                                                background: 'var(--sf-grad)',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: '0.82rem', fontWeight: 700, color: 'white', flexShrink: 0,
-                                            }}>
-                                                {c.name?.charAt(0).toUpperCase()}
-                                            </div>
-                                            <span style={{ fontWeight: 600, color: 'var(--sf-text)' }}>{c.name}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div style={{ color: 'var(--sf-text-2)', fontSize: '0.85rem' }}>{c.email}</div>
-                                        <div style={{ color: 'var(--sf-text-3)', fontSize: '0.78rem' }}>{c.phone ?? 'No phone'}</div>
-                                    </td>
-                                    <td>
-                                        <span style={{ fontWeight: 700, color: 'var(--sf-blue-light)' }}>{c.total_bookings}</span>
-                                    </td>
-                                    <td>{new Date(c.last_appointment).toLocaleDateString()}</td>
-                                    <td>
-                                        <button
-                                            className="text-xs font-bold text-blue-400 hover:text-blue-300"
-                                            onClick={() => navigate(`/shop/customers/${c.user_id}`, { state: { customer: c } })}
-                                        >
-                                            View History
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <div className="sf-pagination">
-                        <span>Showing {filteredCustomers.length} customer{filteredCustomers.length !== 1 ? 's' : ''}</span>
+              {error && <div className="sf-error" style={{ marginBottom: 16 }}>{error}</div>}
+
+              {loading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {[1, 2, 3, 4, 5].map(i => <div key={i} className="sf-skeleton" style={{ height: 68 }} />)}
+                  </div>
+              ) : filtered.length === 0 ? (
+                  <div className="sf-empty sf-anim-up">
+                      <div className="sf-empty-icon"><Users size={22} /></div>
+                      <div className="sf-empty-title">No customers found</div>
+                          <p className="sf-empty-sub">Try adjusting your search or filters.</p>
+                      </div>
+                  ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {filtered.map((c, i) => (
+                                  <div key={c.user_id}
+                                      className={`sf-anim-up sf-s${Math.min(i + 1, 6)}`}
+                                      onClick={() => navigate(`/shop/customers/${c.user_id}`, { state: { customer: c } })}
+                                      style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', borderRadius: 14, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer', transition: 'all 0.18s' }}
+                                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(249,115,22,0.2)'; e.currentTarget.style.transform = 'translateX(3px)'; }}
+                                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'none'; }}
+                                  >
+                                      {/* Avatar */}
+                                      <div style={{ width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(135deg,rgba(249,115,22,0.25),rgba(234,88,12,0.15))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: '#f97316', flexShrink: 0 }}>
+                                          {c.name?.charAt(0).toUpperCase()}
+                                      </div>
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: 3 }}>{c.name}</div>
+                        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+                                <Mail size={10} /> {c.email}
+                            </span>
+                            {c.phone && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
+                                    <Phone size={10} /> {c.phone}
+                                </span>
+                            )}
+                        </div>
                     </div>
+                    {/* Bookings */}
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: 'rgba(249,115,22,0.85)' }}>{c.total_bookings}</div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>bookings</div>
+                    </div>
+                    <ChevronRight size={15} color="rgba(255,255,255,0.15)" style={{ flexShrink: 0 }} />
                 </div>
-            )}
-            </main>
-        </div>
-    );
+            ))}
+                          </div>
+              )}
+
+              {/* Count */}
+              {!loading && filtered.length > 0 && (
+                  <div style={{ marginTop: 18, fontSize: 11, color: 'rgba(255,255,255,0.2)', fontWeight: 600 }}>
+                      Showing {filtered.length} customer{filtered.length !== 1 ? 's' : ''}
+                  </div>
+              )}
+
+          </div>
+      </div>
+  );
 };
 
 export default ShopCustomers;

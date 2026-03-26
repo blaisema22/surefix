@@ -6,6 +6,9 @@ const { pool } = require('../config/db');
 const authMiddleware = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 const sharp = require('sharp');
+const { sendSMS } = require('../utils/sms');
+const { shortenUrl } = require('../utils/shortener');
+const smsService = require('../services/appointmentSMS.service');
 
 // --- Multer Setup for Image Uploads ---
 const storage = multer.memoryStorage();
@@ -60,11 +63,21 @@ router.post('/',
 
         // Normalize service_id: if it's 'other', null, or empty string, set to null
         const normalized_service_id = (service_id === 'other' || !service_id || service_id === 'undefined') ? null : service_id;
+        const { phone } = req.body;
 
         try {
             console.log('--- NEW BOOKING ATTEMPT ---');
             console.log('User ID:', userId);
-            console.log('Payload:', { centre_id, normalized_service_id, device_id, appointment_date, appointment_time });
+            console.log('Payload:', { centre_id, normalized_service_id, device_id, appointment_date, appointment_time, phone });
+
+            // --- Sync Phone Number to Profile if missing ---
+            if (phone) {
+                const [currentUser] = await pool.query('SELECT phone FROM users WHERE user_id = ?', [userId]);
+                if (currentUser.length > 0 && (!currentUser[0].phone || currentUser[0].phone.length < 5)) {
+                    await pool.query('UPDATE users SET phone = ? WHERE user_id = ?', [phone, userId]);
+                    console.log(`[Sync] Updated customer ${userId} phone to: ${phone}`);
+                }
+            }
 
             const booking_reference = generateBookingReference();
             const status = 'pending';
@@ -90,12 +103,17 @@ router.post('/',
 
             // --- Notify Repair Centre Owner ---
             try {
-                const [centreInfo] = await pool.query('SELECT owner_id, name FROM repair_centres WHERE centre_id = ?', [centre_id]);
+                // Get owner ID and their Phone Number from the users table
+                const [centreInfo] = await pool.query(
+                    `SELECT rc.owner_id, rc.name, u.phone as owner_phone 
+                     FROM repair_centres rc 
+                     JOIN users u ON rc.owner_id = u.user_id 
+                     WHERE rc.centre_id = ?`, [centre_id]);
 
                 if (centreInfo.length > 0) {
-                    const { owner_id, name } = centreInfo[0];
+                    const { owner_id, name, owner_phone } = centreInfo[0];
                     const notifTitle = 'New Booking Received';
-                    const notifMessage = `New appointment (${booking_reference}) received for ${name}.`;
+                    const notifMessage = `SureFix Alert: You have a new repair request [Ref: ${booking_reference}]. Please log in to review.`;
 
                     // 1. Save Notification to Database
                     const [notifRes] = await pool.query(
@@ -114,10 +132,43 @@ router.post('/',
                             created_at: new Date()
                         });
                     }
+
+                    // 3. Send SMS to Shop Owner
+                    if (owner_phone) {
+                        const link = await shortenUrl(`${process.env.FRONTEND_URL}/dashboard`);
+                        await sendSMS(owner_phone, `SureFix: ${notifMessage} View: ${link}`);
+                    }
                 }
             } catch (notifErr) {
                 console.error('Notification error:', notifErr);
                 // Continue without failing the request
+            }
+
+            // --- Notify Customer + Shop via rich SMS templates ---
+            try {
+                const [customerInfo] = await pool.query(
+                    `SELECT u.phone, u.name, rc.name as centre_name, u2.phone as owner_phone
+                     FROM users u
+                     JOIN appointments a ON a.user_id = u.user_id
+                     JOIN repair_centres rc ON a.centre_id = rc.centre_id
+                     JOIN users u2 ON rc.owner_id = u2.user_id
+                     WHERE a.appointment_id = ?`, [result.insertId]);
+
+                if (customerInfo.length > 0) {
+                    const info = customerInfo[0];
+                    const apptData = {
+                        customer_name: info.name,
+                        centre_name: info.centre_name,
+                        booking_reference,
+                        appointment_date,
+                        appointment_time,
+                        service_name: req.body.service_name || null,
+                        device_brand: null, device_model: null
+                    };
+                    await smsService.onBooked(apptData, info.phone, info.owner_phone);
+                }
+            } catch (custSmsErr) {
+                console.error('Customer SMS error:', custSmsErr);
             }
 
             console.log('✅ Booking Successful! ID:', result.insertId);
@@ -160,13 +211,70 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 });
 
+// GET /api/appointments/shop - Get appointments for the shop owner's centre
+router.get('/shop', authMiddleware, async (req, res) => {
+    if (req.user.role !== 'repairer') {
+        return res.status(403).json({ success: false, message: 'Access denied. Repairers only.' });
+    }
+    try {
+        const [appointments] = await pool.query(
+            `SELECT a.*, 
+                    u.name as customer_name, u.phone as customer_phone,
+                    d.brand as device_brand, d.model as device_model,
+                    s.service_name,
+                    rc.name as centre_name
+             FROM appointments a
+             JOIN repair_centres rc ON a.centre_id = rc.centre_id
+             JOIN users u ON a.user_id = u.user_id
+             JOIN devices d ON a.device_id = d.device_id
+             LEFT JOIN services s ON a.service_id = s.service_id
+             WHERE rc.owner_id = ?
+             ORDER BY a.appointment_id DESC LIMIT 10`,
+            [req.user.userId]
+        );
+        res.json({ success: true, appointments });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
+
+// GET /api/appointments/:id - Get single appointment details
+router.get('/:id', authMiddleware, async (req, res) => {
+    try {
+        const [appt] = await pool.query(
+            `SELECT a.*, 
+                    c.name as centre_name, c.address as centre_address, c.phone as centre_phone, c.latitude, c.longitude,
+                    s.service_name, 
+                    d.brand as device_brand, d.model as device_model, d.device_type
+             FROM appointments a
+             JOIN repair_centres c ON a.centre_id = c.centre_id
+             LEFT JOIN services s ON a.service_id = s.service_id
+             JOIN devices d ON a.device_id = d.device_id
+             WHERE a.appointment_id = ? AND a.user_id = ?`,
+            [req.params.id, req.user.userId]
+        );
+
+        if (appt.length === 0) {
+            return res.status(404).json({ success: false, message: 'Appointment not found' });
+        }
+
+        res.json({ success: true, appointment: appt[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
+
 // PATCH /api/appointments/:id/cancel - Cancel appointment
 router.patch('/:id/cancel', authMiddleware, async (req, res) => {
     try {
         // Get appointment info before cancellation
         const [appt] = await pool.query(
-            `SELECT a.booking_reference, rc.owner_id as shop_owner_id, rc.name as centre_name
-             FROM appointments a JOIN repair_centres rc ON a.centre_id = rc.centre_id
+            `SELECT a.booking_reference, rc.owner_id as shop_owner_id, rc.name as centre_name, u.phone as owner_phone
+             FROM appointments a
+             JOIN repair_centres rc ON a.centre_id = rc.centre_id
+             JOIN users u ON rc.owner_id = u.user_id
              WHERE a.appointment_id = ? AND a.user_id = ?`, [req.params.id, req.user.userId]
         );
 
@@ -180,9 +288,9 @@ router.patch('/:id/cancel', authMiddleware, async (req, res) => {
         // --- Notify Shop Owner ---
         if (appt.length > 0) {
             try {
-                const { booking_reference, shop_owner_id, centre_name } = appt[0];
+                const { booking_reference, shop_owner_id, owner_phone } = appt[0];
                 const notifTitle = 'Appointment Cancelled';
-                const notifMessage = `Customer has cancelled appointment ${booking_reference} for ${centre_name}.`;
+                const notifMessage = `SureFix Alert: The customer has cancelled their repair request [Ref: ${booking_reference}].`;
 
                 const [notifRes] = await pool.query(
                     'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
@@ -199,6 +307,24 @@ router.patch('/:id/cancel', authMiddleware, async (req, res) => {
                         is_read: 0,
                         created_at: new Date()
                     });
+                }
+
+                // Notify Shop Owner via SMS with rich template
+                if (appt.length > 0) {
+                    const { booking_reference, centre_name, owner_phone } = appt[0];
+                    const [custData] = await pool.query(
+                        `SELECT u.name, u.phone, a.appointment_date, a.appointment_time
+                         FROM appointments a JOIN users u ON a.user_id = u.user_id
+                         WHERE a.appointment_id = ?`, [req.params.id]);
+                    if (custData.length > 0) {
+                        await smsService.onCancelled({
+                            customer_name: custData[0].name,
+                            centre_name,
+                            booking_reference,
+                            appointment_date: custData[0].appointment_date,
+                            appointment_time: custData[0].appointment_time,
+                        }, custData[0].phone, owner_phone);
+                    }
                 }
             } catch (notifErr) {
                 console.error('Cancellation notification error:', notifErr);
@@ -231,8 +357,10 @@ router.patch('/:id/status', authMiddleware, upload.single('completionImage'), [
     try {
         // Check shop owns centre and get info for notification
         const [appt] = await pool.query(
-            `SELECT a.user_id as customer_id, a.centre_id, rc.owner_id as shop_owner_id, a.booking_reference, rc.name as centre_name
-             FROM appointments a JOIN repair_centres rc ON a.centre_id = rc.centre_id
+            `SELECT a.user_id as customer_id, a.centre_id, rc.owner_id as shop_owner_id, a.booking_reference, rc.name as centre_name, u.phone as customer_phone
+             FROM appointments a
+             JOIN repair_centres rc ON a.centre_id = rc.centre_id
+             JOIN users u ON a.user_id = u.user_id
              WHERE a.appointment_id = ?`, [id]
         );
         if (appt.length === 0 || appt[0].shop_owner_id !== req.user.userId) {
@@ -266,10 +394,27 @@ router.patch('/:id/status', authMiddleware, upload.single('completionImage'), [
 
         // --- Notify Customer ---
         try {
-            const { customer_id, booking_reference, centre_name } = appt[0];
+            const { customer_id, booking_reference, centre_name, customer_phone } = appt[0];
             const notifTitle = 'Appointment Update';
-            const statusText = status.toUpperCase().replace('_', ' ');
-            const notifMessage = `Your appointment (${booking_reference}) at ${centre_name} is now ${statusText}.`;
+            let notifMessage = '';
+            
+            switch(status) {
+                case 'confirmed':
+                    notifMessage = `Great news! Your repair request [Ref: ${booking_reference}] at ${centre_name} has been CONFIRMED.`;
+                    break;
+                case 'in_progress':
+                    notifMessage = `Update: Your device [Ref: ${booking_reference}] is now IN PROGRESS at ${centre_name}!`;
+                    break;
+                case 'completed':
+                    notifMessage = `Success! Your repair [Ref: ${booking_reference}] is COMPLETED. You can now pick up your device at ${centre_name}.`;
+                    break;
+                case 'cancelled':
+                    notifMessage = `Your repair [Ref: ${booking_reference}] at ${centre_name} has been CANCELLED.`;
+                    break;
+                default:
+                    const statusText = status.toUpperCase().replace('_', ' ');
+                    notifMessage = `Your appointment [Ref: ${booking_reference}] at ${centre_name} is now ${statusText}.`;
+            }
 
             // 1. Save Notification to Database
             const [notifRes] = await pool.query(
@@ -289,6 +434,24 @@ router.patch('/:id/status', authMiddleware, upload.single('completionImage'), [
                     is_read: 0,
                     created_at: new Date()
                 });
+            }
+
+            // 3. Send rich SMS to Customer based on status
+            if (customer_phone) {
+                const apptData = { customer_name: '', centre_name, booking_reference,
+                    appointment_date: '', appointment_time: '' };
+                const [fullAppt] = await pool.query(
+                    `SELECT u.name as customer_name, a.appointment_date, a.appointment_time
+                     FROM appointments a JOIN users u ON a.user_id = u.user_id
+                     WHERE a.appointment_id = ?`, [id]);
+                if (fullAppt.length > 0) Object.assign(apptData, fullAppt[0]);
+
+                switch (status) {
+                    case 'confirmed':    await smsService.onConfirmed(apptData, customer_phone); break;
+                    case 'in_progress': await smsService.onStarted(apptData, customer_phone);   break;
+                    case 'completed':   await smsService.onCompleted(apptData, customer_phone);  break;
+                    case 'cancelled':   await smsService.onCancelled(apptData, customer_phone);  break;
+                }
             }
         } catch (notifErr) {
             console.error('Customer Notification error:', notifErr);
@@ -340,6 +503,43 @@ router.post('/:id/rate', authMiddleware, [
     } catch (err) {
         console.error('Rating error:', err);
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// GET /api/appointments/reference/:ref - Get appointment by reference (Repairer only)
+router.get('/reference/:ref', authMiddleware, async (req, res) => {
+    // 1. Verify Role
+    if (req.user.role !== 'repairer') {
+        return res.status(403).json({ success: false, message: 'Access denied. Repairers only.' });
+    }
+
+    const { ref } = req.params;
+
+    try {
+        // 2. Find appointment AND ensure it belongs to a centre owned by this user
+        const [appt] = await pool.query(
+            `SELECT a.*, 
+                    u.name as customer_name, u.phone as customer_phone, u.email as customer_email,
+                    d.brand, d.model, 
+                    s.service_name,
+                    rc.name as centre_name
+             FROM appointments a
+             JOIN repair_centres rc ON a.centre_id = rc.centre_id
+             JOIN users u ON a.user_id = u.user_id
+             JOIN devices d ON a.device_id = d.device_id
+             LEFT JOIN services s ON a.service_id = s.service_id
+             WHERE a.booking_reference = ? AND rc.owner_id = ?`,
+            [ref, req.user.userId]
+        );
+
+        if (appt.length === 0) {
+            return res.status(404).json({ success: false, message: 'Appointment not found or does not belong to your centre.' });
+        }
+
+        res.json({ success: true, appointment: appt[0] });
+    } catch (err) {
+        console.error('QR Lookup Error:', err);
+        res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
 

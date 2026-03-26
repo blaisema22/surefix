@@ -15,6 +15,7 @@ CREATE TABLE users (
   role          ENUM('customer','repairer','admin') DEFAULT 'customer',
   profile_image_url VARCHAR(255) DEFAULT NULL,
   is_verified   BOOLEAN DEFAULT FALSE,
+  is_authorized BOOLEAN DEFAULT TRUE,
   verification_token VARCHAR(255),
   reset_token   VARCHAR(255),
   reset_token_expires DATETIME,
@@ -50,8 +51,7 @@ CREATE TABLE services (
   service_name            VARCHAR(100) NOT NULL,
   description             TEXT,
   device_category         ENUM('smartphone','tablet','laptop','desktop','other') NOT NULL,
-  estimated_price_min     DECIMAL(10,2),
-  estimated_price_max     DECIMAL(10,2),
+  
   estimated_duration_minutes INT DEFAULT 60,
   is_available            BOOLEAN DEFAULT TRUE,
   FOREIGN KEY (centre_id) REFERENCES repair_centres(centre_id) ON DELETE CASCADE
@@ -103,7 +103,20 @@ CREATE TABLE notifications (
   FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
--- ═══════════════════════════════════════════════════════════════════════════
+-- ─── REVIEWS ───────────────────────────────────────────────────────────────
+CREATE TABLE reviews (
+  review_id       INT AUTO_INCREMENT PRIMARY KEY,
+  appointment_id  INT NOT NULL,
+  centre_id       INT NOT NULL,
+  user_id         INT NOT NULL,
+  rating          TINYINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment         TEXT,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (appointment_id) REFERENCES appointments(appointment_id) ON DELETE CASCADE,
+  FOREIGN KEY (centre_id)      REFERENCES repair_centres(centre_id)    ON DELETE CASCADE,
+  FOREIGN KEY (user_id)        REFERENCES users(user_id)               ON DELETE CASCADE
+);
+
 -- SEED DATA
 -- DEFAULT PASSWORDS (all accounts use same hash for demo convenience)
 -- Hash = bcrypt of "Password@123"  (12 rounds)
@@ -123,6 +136,7 @@ INSERT INTO users (name, email, password_hash, phone, role, is_verified) VALUES
 
 -- Sample customer (user_id: 7)
 INSERT INTO users (name, email, password_hash, phone, role, is_verified) VALUES
+('Manishimwe Blaise', 'manishimweblaise603@gmail.com', '$2a$12$rdu6namMM3NbVfUKKz5vtOZfZyDL8AjmZS4TFq0ctmNh2tfThSBYe', '+250785470311', 'customer', TRUE),
 ('Alice Mukamana', 'alice@example.com', '$2a$12$rdu6namMM3NbVfUKKz5vtOZfZyDL8AjmZS4TFq0ctmNh2tfThSBYe', '+250788000001', 'customer', TRUE);
 
 -- Sample notifications for demo users
@@ -141,30 +155,30 @@ INSERT INTO repair_centres (owner_id, name, address, district, latitude, longitu
 (6, 'Elite Electronics Repair','KN 45 St, CBD',        'Nyarugenge', -1.9444, 30.0583, '+250788567890', 'elite@surefix.com',    'Premium service for high-end devices. Walk-ins welcome.',                 '08:00:00','20:00:00', TRUE, TRUE);
 
 -- Services
-INSERT INTO services (centre_id, service_name, description, device_category, estimated_price_min, estimated_price_max, estimated_duration_minutes) VALUES
-(1,'Screen Replacement','Replace cracked or broken screens with OEM or quality aftermarket parts','smartphone',15000,45000,90),
-(1,'Battery Replacement','Replace degraded batteries to restore full charge capacity','smartphone',8000,20000,60),
-(1,'Charging Port Repair','Fix or replace faulty charging ports','smartphone',10000,25000,45),
-(1,'Laptop Screen Repair','Replace damaged laptop screens','laptop',35000,80000,120),
-(1,'Laptop Keyboard Replacement','Replace non-functional or physically damaged keyboards','laptop',20000,50000,90),
-(1,'Data Recovery','Recover lost or deleted data from damaged devices','smartphone',20000,60000,180),
-(2,'iPhone Screen Replacement','OEM and aftermarket screens for all iPhone models','smartphone',20000,60000,90),
-(2,'iPhone Battery Replacement','Apple certified battery replacements','smartphone',12000,25000,60),
-(2,'Water Damage Repair','Clean and repair water-damaged devices','smartphone',25000,70000,240),
-(2,'Software Troubleshooting','Fix software issues, factory resets, OS updates','smartphone',5000,15000,60),
-(2,'Tablet Screen Repair','Screen replacement for tablets','tablet',25000,75000,120),
-(3,'Screen Replacement','All brands, all models','smartphone',12000,50000,90),
-(3,'Motherboard Repair','Advanced motherboard-level repairs','laptop',30000,100000,480),
-(3,'RAM Upgrade','Add or replace RAM modules','laptop',15000,40000,60),
-(3,'SSD Installation','Upgrade to SSD for faster performance','laptop',25000,60000,90),
-(3,'Virus Removal','Complete malware and virus removal with cleanup','laptop',8000,20000,120),
-(4,'Screen Replacement','Budget-friendly screen repairs','smartphone',10000,35000,90),
-(4,'Battery Replacement','All phone models','smartphone',6000,18000,60),
-(4,'Software Issues','OS reinstall, updates, troubleshooting','smartphone',4000,12000,60),
-(4,'Desktop Repair','PC desktop diagnosis and repair','desktop',15000,50000,120),
-(4,'Printer Repair','Fix and service printers','other',10000,35000,90),
-(5,'Premium Screen Replacement','Only OEM parts used','smartphone',25000,80000,90),
-(5,'MacBook Repair','Specialized MacBook diagnosis and repair','laptop',50000,150000,240),
-(5,'iPad Repair','All iPad models','tablet',30000,90000,120),
-(5,'Camera Module Replacement','Front and rear camera replacement','smartphone',15000,50000,90),
-(5,'Speaker/Mic Repair','Audio component repairs','smartphone',10000,30000,60);
+INSERT INTO services (centre_id, service_name, description, device_category,  estimated_duration_minutes) VALUES
+(1,'Screen Replacement','Replace cracked or broken screens with OEM or quality aftermarket parts','smartphone',90),
+(1,'Battery Replacement','Replace degraded batteries to restore full charge capacity','smartphone',60),
+(1,'Charging Port Repair','Fix or replace faulty charging ports','smartphone',45),
+(1,'Laptop Screen Repair','Replace damaged laptop screens','laptop',120),
+(1,'Laptop Keyboard Replacement','Replace non-functional or physically damaged keyboards','laptop',90),
+(1,'Data Recovery','Recover lost or deleted data from damaged devices','smartphone',180),
+(2,'iPhone Screen Replacement','OEM and aftermarket screens for all iPhone models','smartphone',90),
+(2,'iPhone Battery Replacement','Apple certified battery replacements','smartphone',60),
+(2,'Water Damage Repair','Clean and repair water-damaged devices','smartphone',240),
+(2,'Software Troubleshooting','Fix software issues, factory resets, OS updates','smartphone',60),
+(2,'Tablet Screen Repair','Screen replacement for tablets','tablet',120),
+(3,'Screen Replacement','All brands, all models','smartphone',90),
+(3,'Motherboard Repair','Advanced motherboard-level repairs','laptop',480),
+(3,'RAM Upgrade','Add or replace RAM modules','laptop',60),
+(3,'SSD Installation','Upgrade to SSD for faster performance','laptop',90),
+(3,'Virus Removal','Complete malware and virus removal with cleanup','laptop',120),
+(4,'Screen Replacement','Budget-friendly screen repairs','smartphone',90),
+(4,'Battery Replacement','All phone models','smartphone',60),
+(4,'Software Issues','OS reinstall, updates, troubleshooting','smartphone',60),
+(4,'Desktop Repair','PC desktop diagnosis and repair','desktop',120),
+(4,'Printer Repair','Fix and service printers','other',90),
+(5,'Premium Screen Replacement','Only OEM parts used','smartphone',90),
+(5,'MacBook Repair','Specialized MacBook diagnosis and repair','laptop',240),
+(5,'iPad Repair','All iPad models','tablet',120),
+(5,'Camera Module Replacement','Front and rear camera replacement','smartphone',90),
+(5,'Speaker/Mic Repair','Audio component repairs','smartphone',60);

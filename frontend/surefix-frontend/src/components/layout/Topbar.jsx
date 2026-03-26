@@ -88,7 +88,9 @@ const Topbar = ({ toggleSidebar }) => {
                         </div>
                         <div className="hidden lg:block pr-2 min-w-0">
                             <div className="text-sm font-semibold text-white truncate leading-tight">{user?.name || 'User'}</div>
-                            <div className="text-xs font-medium text-slate-400 capitalize">{user?.role || 'Client'}</div>
+                            <div className="text-xs font-medium text-slate-400">
+                                {user?.role === 'repairer' ? 'Shop Owner' : user?.role === 'admin' ? 'Administrator' : 'Customer'}
+                            </div>
                         </div>
                     </button>
                 </div>

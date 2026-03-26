@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import NotificationListener from '../shared/NotificationListener';
+import SmsSimulator from '../shared/SmsSimulator';
 
 export default function MainLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -31,6 +33,8 @@ export default function MainLayout() {
                 {/* Subtle cyan theme glow */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-cyan-500/10 blur-[120px] pointer-events-none rounded-full z-0" />
                 <div className="relative z-10">
+                    <NotificationListener />
+                    <SmsSimulator />
                     <Outlet />
                 </div>
              </div>

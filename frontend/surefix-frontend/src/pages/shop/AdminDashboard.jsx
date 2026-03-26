@@ -1,239 +1,257 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../admin.api';
-import StatCard from '../../components/shared/StatCard';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+    ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import {
-    Users,
-    Store,
-    CalendarCheck,
-    Activity,
-    ShieldCheck,
-    AlertCircle,
-    TrendingUp,
-    Server,
-    Download,
-    FileText,
-    ChevronDown
+    Users, Store, CalendarCheck, Activity, ShieldCheck,
+    AlertCircle, TrendingUp, Server, Download, FileText, ChevronDown
 } from 'lucide-react';
+import '../../styles/sf-pages.css';
+
+const adminStyles = `
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+.ad-stat {
+  background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07);
+  border-radius:18px; padding:22px 24px; position:relative; overflow:hidden;
+  transition:transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.ad-stat:hover { transform:translateY(-3px); box-shadow:0 12px 32px rgba(0,0,0,0.3); border-color:rgba(255,255,255,0.12); }
+.ad-stat::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; border-radius:18px 18px 0 0; }
+.ad-stat-blue::before   { background:linear-gradient(90deg,#3b82f6,#60a5fa); }
+.ad-stat-green::before  { background:linear-gradient(90deg,#10b981,#34d399); }
+.ad-stat-amber::before  { background:linear-gradient(90deg,#f59e0b,#fcd34d); }
+.ad-stat-purple::before { background:linear-gradient(90deg,#8b5cf6,#a78bfa); }
+.ad-stat-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; }
+.ad-stat-icon-blue   { background:rgba(59,130,246,0.12);  color:#60a5fa; }
+.ad-stat-icon-green  { background:rgba(16,185,129,0.12);  color:#34d399; }
+.ad-stat-icon-amber  { background:rgba(245,158,11,0.12);  color:#fcd34d; }
+.ad-stat-icon-purple { background:rgba(139,92,246,0.12);  color:#a78bfa; }
+.ad-stat-value { font-size:34px; font-weight:800; color:#fff; line-height:1; letter-spacing:-1px; }
+.ad-stat-label { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:rgba(255,255,255,0.28); margin-top:4px; }
+.ad-card { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:20px; overflow:hidden; }
+.ad-card-header { padding:20px 24px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:space-between; }
+.ad-card-title { font-size:14px; font-weight:700; color:rgba(255,255,255,0.8); }
+.ad-export-menu { position:absolute; top:52px; right:0; background:#0d1424; border:1px solid rgba(255,255,255,0.09); border-radius:14px; padding:8px; min-width:190px; z-index:50; box-shadow:0 16px 40px rgba(0,0,0,0.5); }
+.ad-export-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; background:none; border:none; color:rgba(255,255,255,0.5); font-family:'Outfit',sans-serif; font-size:13px; font-weight:500; cursor:pointer; width:100%; text-align:left; transition:all 0.18s; }
+.ad-export-item:hover { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.85); }
+.ad-progress-bar { height:4px; border-radius:4px; background:rgba(255,255,255,0.06); overflow:hidden; }
+.ad-progress-fill { height:100%; border-radius:4px; transition:width 0.6s ease; }
+.ad-activity-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+.ad-live-dot { width:7px; height:7px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px rgba(34,197,94,0.6); animation:sf-pulse 2s infinite; }
+`;
+
+const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+        <div style={{ background: '#0d1424', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '12px 16px', fontFamily: 'Outfit,sans-serif' }}>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.8px' }}>{label}</p>
+            <p style={{ fontSize: 16, fontWeight: 800, color: '#f97316', margin: 0 }}>{payload[0].value}</p>
+        </div>
+    );
+};
+
+const STAT_CONFIGS = [
+    { key: 'total_users', label: 'Total Users', iconKey: 'blue', Icon: Users },
+    { key: 'total_centres', label: 'Repair Centres', iconKey: 'green', Icon: Store },
+    { key: 'total_appointments', label: 'Total Bookings', iconKey: 'amber', Icon: CalendarCheck },
+    { key: 'active_centres', label: 'Active Centres', iconKey: 'purple', Icon: Activity },
+];
 
 const AdminDashboard = () => {
-    const [stats, setStats] = useState({
-        total_users: 0,
-        total_centres: 0,
-        total_appointments: 0,
-        active_centres: 0
-    });
+    const [stats, setStats] = useState({ total_users: 0, total_centres: 0, total_appointments: 0, active_centres: 0 });
     const [chartData, setChartData] = useState([]);
     const [activity, setActivity] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [showExportMenu, setShowExportMenu] = useState(false);
+    const [showExport, setShowExport] = useState(false);
     const [downloading, setDownloading] = useState(null);
 
     useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const res = await adminAPI.getDashboardStats();
-                if (res.success) {
-                    setStats(res.stats);
-                    setChartData(res.chart_data || []);
-                    setActivity(res.activity || []);
-                }
-            } catch (err) {
-                console.error("Failed to fetch admin stats", err);
-                // Fallback / Mock data for demonstration if API fails or doesn't exist yet
-                if (err.response?.status === 404 || err.response?.status === 500) {
-                    setStats({
-                        total_users: 124,
-                        total_centres: 15,
-                        total_appointments: 892,
-                        active_centres: 12
-                    });
-                    setChartData([
-                        { name: 'Jan', value: 40 }, { name: 'Feb', value: 30 },
-                        { name: 'Mar', value: 20 }, { name: 'Apr', value: 27 },
-                        { name: 'May', value: 18 }, { name: 'Jun', value: 23 },
-                        { name: 'Jul', value: 34 }, { name: 'Aug', value: 45 },
-                    ]);
-                } else {
-                    setError('Failed to load system statistics.');
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchStats();
-    }, []);
+      (async () => {
+          try {
+              const res = await adminAPI.getDashboardStats();
+          if (res.success) { setStats(res.stats); setChartData(res.chart_data || []); setActivity(res.activity || []); }
+      } catch (err) {
+              if ([404, 500].includes(err.response?.status)) {
+                  setStats({ total_users: 124, total_centres: 15, total_appointments: 892, active_centres: 12 });
+                  setChartData(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'].map((name, i) => ({ name, value: [40, 30, 20, 27, 18, 23, 34, 45][i] })));
+              } else setError('Failed to load system statistics.');
+          } finally { setLoading(false); }
+      })();
+  }, []);
 
     const handleExport = async (type) => {
         setDownloading(type);
-        try {
-            await adminAPI.downloadReport(type);
-        } catch (err) {
-            alert('Failed to download report.');
-        } finally {
-            setDownloading(null);
-            setShowExportMenu(false);
-        }
-    };
-
-    const CustomTooltip = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="glass-card premium-card p-4 border-none bg-slate-900/90 shadow-2xl">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">{label}</p>
-                    <div className="flex items-center gap-4">
-                        <div className="w-2 h-2 rounded-full bg-red-500 shadow-glow" />
-                        <span className="text-xs font-bold text-white uppercase tracking-tight">Activity: {payload[0].value}</span>
-                    </div>
-                </div>
-            );
-        }
-        return null;
-    };
+      try { await adminAPI.downloadReport(type); }
+      catch { alert('Failed to download report.'); }
+      finally { setDownloading(null); setShowExport(false); }
+  };
 
     if (loading) return (
-        <div className="flex flex-col items-center justify-center h-[70vh] gap-6 text-slate-500">
-            <div className="w-16 h-16 rounded-full border-2 border-slate-800 border-t-red-500 animate-spin" />
-            <span className="text-[10px] font-black uppercase tracking-[0.4em]">System Diagnostics...</span>
-        </div>
-    );
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 360, gap: 14, fontFamily: 'Outfit,sans-serif' }}>
+          <div className="sf-spinner" style={{ width: 36, height: 36 }} />
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)' }}>Loading system data…</span>
+      </div>
+  );
 
     return (
-        <div className="max-w-7xl mx-auto p-4 md:p-12 animate-in pb-32">
-            {/* Header */}
-            <header className="mb-12 space-y-4">
-                <div className="flex items-center gap-3 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center text-white shadow-lg shadow-red-500/20">
-                        <ShieldCheck size={14} />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">Admin Console</span>
-                </div>
-                <h1 className="text-5xl font-normal text-white italic tracking-tighter leading-none" style={{ fontFamily: 'var(--font-serif)' }}>
-                    System <span className="text-slate-400">Overview.</span>
-                </h1>
-                <p className="text-slate-500 text-sm font-medium">Monitoring global network performance and entity registration.</p>
-            </header>
+      <>
+          <style>{adminStyles}</style>
+          <div className="sf-page" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+              <div className="sf-page-wrap" style={{ maxWidth: 960 }}>
 
-            {/* Actions Bar */}
-            <div className="flex justify-end mb-8 relative">
-                <button
-                    onClick={() => setShowExportMenu(!showExportMenu)}
-                    className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors border border-white/5"
-                >
-                    {downloading ? 'Downloading...' : 'Export Reports'}
-                    {downloading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <ChevronDown size={14} />}
-                </button>
-
-                {showExportMenu && (
-                    <div className="absolute top-12 right-0 bg-slate-900 border border-white/10 rounded-xl shadow-2xl p-2 w-48 z-50 flex flex-col gap-1">
-                        <button onClick={() => handleExport('users')} className="flex items-center gap-3 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5 rounded-lg w-full text-left"><FileText size={14} /> Users Report</button>
-                        <button onClick={() => handleExport('appointments')} className="flex items-center gap-3 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5 rounded-lg w-full text-left"><FileText size={14} /> Bookings Report</button>
-                        <button onClick={() => handleExport('centres')} className="flex items-center gap-3 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5 rounded-lg w-full text-left"><FileText size={14} /> Centres Report</button>
-                    </div>
+                  {/* Header */}
+                  <div className="sf-anim-up" style={{ marginBottom: 32 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(239,68,68,0.8)' }}>
+                              <ShieldCheck size={16} />
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(239,68,68,0.7)' }}>Admin Console</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+                          <div>
+                              <h1 className="sf-page-title">System Overview</h1>
+                              <p className="sf-page-sub">Monitoring global network performance and registrations.</p>
+                          </div>
+                          {/* Export */}
+                          <div style={{ position: 'relative' }}>
+                              <button className="sf-btn-ghost" onClick={() => setShowExport(p => !p)}>
+                                  <Download size={14} />
+                                  {downloading ? 'Downloading…' : 'Export Reports'}
+                                  <ChevronDown size={13} style={{ transform: showExport ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
+                              </button>
+                              {showExport && (
+                                  <div className="ad-export-menu">
+                                      {['users', 'appointments', 'centres'].map(type => (
+                                          <button key={type} className="ad-export-item" onClick={() => handleExport(type)}>
+                                              <FileText size={13} /> {type.charAt(0).toUpperCase() + type.slice(1)} Report
+                                          </button>
+                    ))}
+                                  </div>
                 )}
+                          </div>
+                      </div>
+                  </div>
+
+                  {error && (
+                      <div className="sf-error sf-anim-up" style={{ marginBottom: 24 }}>
+                          <AlertCircle size={15} /> {error}
+                      </div>
+                  )}
+
+                  {/* Stats */}
+                  <div className="sf-anim-up sf-s1" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 28 }}>
+                      {STAT_CONFIGS.map(({ key, label, iconKey, Icon }) => (
+                          <div key={key} className={`ad-stat ad-stat-${iconKey}`}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                                  <div className={`ad-stat-icon ad-stat-icon-${iconKey}`}><Icon size={17} /></div>
+                              </div>
+                              <div className="ad-stat-value">{stats[key] ?? 0}</div>
+                              <div className="ad-stat-label">{label}</div>
+                          </div>
+                      ))}
+                  </div>
+
+                  {/* Main grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16 }}>
+
+                      {/* Chart */}
+                      <div className="ad-card sf-anim-up sf-s2">
+                          <div className="ad-card-header">
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <TrendingUp size={15} color="rgba(249,115,22,0.7)" />
+                                  <span className="ad-card-title">Monthly Activity</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span className="ad-live-dot" />
+                                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'rgba(34,197,94,0.7)' }}>Live</span>
+                              </div>
+                          </div>
+                          <div style={{ height: 260, padding: '16px 16px 8px' }}>
+                              <ResponsiveContainer width="100%" height="100%">
+                                  <AreaChart data={chartData} margin={{ top: 0, right: 0, left: -28, bottom: 0 }}>
+                                      <defs>
+                                          <linearGradient id="adGrad" x1="0" y1="0" x2="0" y2="1">
+                                              <stop offset="5%" stopColor="#f97316" stopOpacity={0.25} />
+                                              <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                                          </linearGradient>
+                                      </defs>
+                                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                      <XAxis dataKey="name" stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} dy={8} fontFamily="Outfit,sans-serif" />
+                                      <YAxis stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} fontFamily="Outfit,sans-serif" />
+                                      <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1 }} />
+                                      <Area type="monotone" dataKey="value" stroke="#f97316" strokeWidth={2.5} fill="url(#adGrad)" />
+                                  </AreaChart>
+                              </ResponsiveContainer>
+                          </div>
+                      </div>
+
+                      {/* Side panels */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                          {/* Recent activity */}
+                          <div className="ad-card sf-anim-up sf-s2" style={{ flex: 1 }}>
+                              <div className="ad-card-header">
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                      <Activity size={14} color="rgba(96,165,250,0.7)" />
+                                      <span className="ad-card-title">Recent Activity</span>
+                                  </div>
+                              </div>
+                              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                                  {activity.length > 0 ? activity.map((item, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                          <div className="ad-activity-dot" style={{ background: item.type === 'user' ? '#60a5fa' : '#34d399', boxShadow: item.type === 'user' ? '0 0 8px rgba(96,165,250,0.4)' : '0 0 8px rgba(52,211,153,0.4)' }} />
+                          <div>
+                              <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.75)', margin: 0, marginBottom: 2 }}>{item.subject}</p>
+                              <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', margin: 0 }}>
+                                  {item.type === 'user' ? `New ${item.detail}` : 'New Centre'} · {new Date(item.created_at).toLocaleDateString()}
+                              </p>
+                          </div>
+                      </div>
+                  )) : <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)', fontStyle: 'italic' }}>No recent activity.</p>}
+                              </div>
+                          </div>
+
+                          {/* Server status */}
+                          <div className="ad-card sf-anim-up sf-s3">
+                              <div className="ad-card-header">
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                      <Server size={14} color="rgba(255,255,255,0.3)" />
+                                      <span className="ad-card-title">Server Status</span>
+                                  </div>
+                              </div>
+                              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                                  {[
+                                      { label: 'CPU Load', val: 12, color: '#34d399' },
+                                      { label: 'Memory Usage', val: 45, color: '#60a5fa' },
+                                      { label: 'Storage', val: 28, color: '#a78bfa' },
+                                  ].map(m => (
+                                      <div key={m.label}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>{m.label}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: m.color, fontFamily: 'monospace' }}>{m.val}%</span>
+                          </div>
+                          <div className="ad-progress-bar">
+                              <div className="ad-progress-fill" style={{ width: `${m.val}%`, background: m.color }} />
+                          </div>
+                      </div>
+                  ))}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 4 }}>
+                                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
+                                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>All Systems Operational</span>
+                                  </div>
+                              </div>
+                          </div>
+
             </div>
+                  </div>
 
-            {error && (
-                <div className="mb-8 p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center gap-4">
-                    <AlertCircle size={20} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">{error}</span>
-                </div>
-            )}
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                <StatCard label="Total Users" value={stats.total_users} icon={Users} color="#3B82F6" delay={100} />
-                <StatCard label="Network Centres" value={stats.total_centres} icon={Store} color="#10B981" delay={200} />
-                <StatCard label="Total Bookings" value={stats.total_appointments} icon={CalendarCheck} color="#F59E0B" delay={300} />
-                <StatCard label="Active Nodes" value={stats.active_centres} icon={Activity} color="#8B5CF6" delay={400} />
-            </div>
-
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-                {/* Chart Section */}
-                <div className="lg:col-span-2 space-y-8">
-                    <div className="glass-card premium-card p-8 border-none bg-gradient-to-br from-white/[0.03] to-transparent h-[450px] flex flex-col">
-                        <div className="flex items-center justify-between mb-8">
-                            <div className="flex items-center gap-3">
-                                <TrendingUp size={20} className="text-red-500" />
-                                <h2 className="text-xl font-normal text-white italic tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>
-                                    Network Traffic
-                                </h2>
-                            </div>
-                            <div className="flex gap-2">
-                                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-glow" />
-                                <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Live</span>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 w-full min-h-0">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                                    <XAxis dataKey="name" stroke="#ffffff30" fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                                    <YAxis stroke="#ffffff30" fontSize={10} tickLine={false} axisLine={false} />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#ffffff20', strokeWidth: 1 }} />
-                                    <Area type="monotone" dataKey="value" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-
-                {/* System Status / Side Panel */}
-                <div className="space-y-6">
-                    <div className="glass-card premium-card p-8 border-none bg-white/[0.02]">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Activity size={18} className="text-blue-400" />
-                            <h3 className="text-sm font-bold text-white uppercase tracking-widest">Recent Activity</h3>
-                        </div>
-
-                        <div className="space-y-5">
-                            {activity.length > 0 ? activity.map((item, i) => (
-                                <div key={i} className="flex items-start gap-3 relative">
-                                    {i !== activity.length - 1 && <div className="absolute left-[3.5px] top-2 bottom-[-20px] w-[1px] bg-white/5" />}
-                                    <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${item.type === 'user' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`} />
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-200">{item.subject}</p>
-                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-0.5">
-                                            {item.type === 'user' ? `New ${item.detail}` : 'New Centre'} · {new Date(item.created_at).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                </div>
-                            )) : <p className="text-xs text-slate-500 italic">No recent activity logged.</p>}
-                        </div>
-                    </div>
-                    <div className="glass-card premium-card p-8 border-none bg-white/[0.02]">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Server size={18} className="text-slate-400" />
-                            <h3 className="text-sm font-bold text-white uppercase tracking-widest">Server Status</h3>
-                        </div>
-
-                        <div className="space-y-6">
-                            {[{ label: 'CPU Load', val: 12, color: 'bg-emerald-500' }, { label: 'Memory Usage', val: 45, color: 'bg-blue-500' }, { label: 'Storage', val: 28, color: 'bg-purple-500' }].map(m => (
-                                <div key={m.label}>
-                                    <div className="flex justify-between text-xs mb-2"><span className="text-slate-500">{m.label}</span><span className={`${m.color.replace('bg-', 'text-')} font-mono`}>{m.val}%</span></div>
-                                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"><div className={`h-full ${m.color}`} style={{ width: `${m.val}%` }} /></div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="mt-8 pt-6 border-t border-white/5"><div className="flex items-center gap-3 text-xs text-slate-400"><div className="w-2 h-2 rounded-full bg-emerald-500" />All Systems Operational</div></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+              </div>
+          </div>
+      </>
+  );
 };
 
 export default AdminDashboard;

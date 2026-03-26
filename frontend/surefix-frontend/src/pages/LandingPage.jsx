@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ArrowRight } from 'lucide-react';
 import PublicNavbar from '../components/shared/PublicNavbar';
 
 // ─── Design tokens ──────────────────────────────────────────────────────────
 const CSS = `
-  /* Landing-specific custom animations/utilities only */
   @keyframes letterDrop {
     0%   { opacity: 0; transform: translateY(-40px) rotateX(90deg); filter: blur(8px); }
     60%  { opacity: 1; transform: translateY(4px) rotateX(-8deg); filter: blur(0); }
@@ -20,6 +18,10 @@ const CSS = `
     0%, 100% { opacity: 1; }
     50%       { opacity: 0; }
   }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 
   .redefined-word {
     display: inline-block;
@@ -32,13 +34,13 @@ const CSS = `
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    animation: letterDrop 0.6s var(--sf-ease) both, gradientShift 4s ease infinite;
+    animation: letterDrop 0.6s var(--sf-ease, cubic-bezier(.16,1,.3,1)) both, gradientShift 4s ease infinite;
   }
   .redefined-cursor {
     display: inline-block;
     width: 3px;
     height: 0.8em;
-    background: var(--sf-cyan);
+    background: var(--sf-cyan, #06b6d4);
     border-radius: 2px;
     margin-left: 5px;
     vertical-align: middle;
@@ -46,7 +48,6 @@ const CSS = `
     opacity: 1;
   }
 
-  /* Noise overlay */
   .noise::after {
     content: '';
     position: absolute;
@@ -55,14 +56,50 @@ const CSS = `
     pointer-events: none;
     z-index: 0;
   }
+
+  /* Mobile Responsiveness */
+  @media (max-width: 1024px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 40px !important; }
+    .features-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .workflow-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+    .hero-section { padding: 80px 32px 100px !important; }
+    .section-padding { padding: 80px 32px !important; }
+  }
+  @media (max-width: 768px) {
+    .stats-grid { gap: 32px !important; }
+    .features-grid { grid-template-columns: 1fr !important; }
+    .cta-buttons { flex-direction: column !important; width: 100%; max-width: 320px; margin-left: auto; margin-right: auto; }
+    .cta-buttons .btn { width: 100%; justify-content: center; }
+    .hero-title { font-size: clamp(2.5rem, 8vw, 3.5rem) !important; line-height: 1.1 !important; }
+    .footer-content { flex-direction: column; gap: 32px !important; align-items: flex-start !important; }
+    .footer-links { gap: 32px !important; width: 100%; justify-content: space-between; }
+  }
+  @media (max-width: 480px) {
+    .stats-grid { grid-template-columns: 1fr !important; }
+    .hero-section { padding: 64px 20px 80px !important; }
+    .section-padding { padding: 64px 20px !important; }
+    .cta-card { padding: 48px 24px !important; }
+    .footer-links { flex-direction: column; gap: 24px !important; }
+  }
 `;
 
-// ─── Icons (inline SVG so no external dep needed) ──────────────────────────
+// ─── Icons ───────────────────────────────────────────────────────────────────
 const Icon = ({ d, size = 20, strokeWidth = 2, style, className }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round"
-    strokeLinejoin="round" style={style} className={className}>
-    {Array.isArray(d) ? d.map((p, i) => <path key={i} d={p} />) : <path d={d} />}
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={style}
+    className={className}
+  >
+    {Array.isArray(d)
+      ? d.map((p, i) => <path key={i} d={p} />)
+      : <path d={d} />}
   </svg>
 );
 
@@ -73,39 +110,45 @@ const icons = {
   shield: ["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", "m9 12 2 2 4-4"],
   bell: ["M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 0 1-3.46 0"],
   arrow: ["M5 12h14", "m12 5 7 7-7 7"],
-  play: ["M5 3l14 9-14 9V3z"],
   check: ["M22 11.08V12a10 10 0 1 1-5.93-9.14", "m9 11 3 3L22 4"],
   users: ["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", "M23 21v-2a4 4 0 0 0-3-3.87", "M16 3.13a4 4 0 0 1 0 7.75", "M9 7m-4 0a4 4 0 1 0 8 0 4 4 0 1 0-8 0"],
   star: ["M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"],
 };
 
-// ─── Sub-components ─────────────────────────────────────────────────────────
+// ─── Sub-components ──────────────────────────────────────────────────────────
 const FeatureCard = ({ iconKey, title, desc, delay, color }) => (
-  <div className="glass-card animate-slide-up"
-    style={{ animationDelay: delay, padding: '2rem' }}>
+  <div className="glass-card animate-slide-up" style={{ animationDelay: delay, padding: '2rem' }}>
     <div style={{
       width: 48, height: 48, borderRadius: 14,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      marginBottom: 24, background: `${color}18`, color
+      marginBottom: 24, background: `${color}18`, color,
     }}>
       <Icon d={icons[iconKey]} size={22} />
     </div>
     <h3 style={{
       fontSize: 17, fontFamily: 'var(--font-sans)', fontWeight: 700,
-      color: 'var(--sf-white)', marginBottom: 12, letterSpacing: '-0.02em'
-    }}>{title}</h3>
-    <p style={{ fontSize: 15, lineHeight: 1.75, color: 'var(--sf-text)', fontWeight: 400 }}>{desc}</p>
+      color: 'var(--sf-white)', marginBottom: 12, letterSpacing: '-0.02em',
+    }}>
+      {title}
+    </h3>
+    <p style={{ fontSize: 15, lineHeight: 1.75, color: 'var(--sf-text)', fontWeight: 400 }}>
+      {desc}
+    </p>
   </div>
 );
 
 const FooterLink = ({ href, children }) => (
-  <a href={href} style={{
-    fontSize: 14, fontFamily: 'var(--font-sans)', fontWeight: 500,
-    color: '#475569', textDecoration: 'none', transition: 'color 0.2s'
-  }}
-    onMouseEnter={e => e.target.style.color = 'var(--sf-blue)'}
-    onMouseLeave={e => e.target.style.color = '#475569'}
-  >{children}</a>
+  <a
+    href={href}
+    style={{
+      fontSize: 14, fontFamily: 'var(--font-sans)', fontWeight: 500,
+      color: '#475569', textDecoration: 'none', transition: 'color 0.2s',
+    }}
+    onMouseEnter={e => (e.target.style.color = 'var(--sf-blue)')}
+    onMouseLeave={e => (e.target.style.color = '#475569')}
+  >
+    {children}
+  </a>
 );
 
 // ─── Cycling animated headline word ─────────────────────────────────────────
@@ -114,18 +157,16 @@ const WORDS = ['Redefined.', 'Reimagined.', 'Elevated.', 'Perfected.', 'Simplifi
 const AnimatedWord = () => {
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);
-  const [key, setKey] = useState(0); // forces re-mount → re-runs animation
+  const [key, setKey] = useState(0);
 
   useEffect(() => {
     const cycle = setInterval(() => {
-      // 1. fade / exit letters
       setVisible(false);
       setTimeout(() => {
-        // 2. swap word + re-trigger letter animations
         setIndex(i => (i + 1) % WORDS.length);
         setKey(k => k + 1);
         setVisible(true);
-      }, 400); // exit duration
+      }, 400);
     }, 5000);
     return () => clearInterval(cycle);
   }, []);
@@ -133,7 +174,10 @@ const AnimatedWord = () => {
   const word = WORDS[index];
 
   return (
-    <span className="redefined-word" style={{ opacity: visible ? 1 : 0, transition: 'opacity 0.35s ease' }}>
+    <span
+      className="redefined-word"
+      style={{ opacity: visible ? 1 : 0, transition: 'opacity 0.35s ease' }}
+    >
       {word.split('').map((ch, i) => (
         <span
           key={`${key}-${i}`}
@@ -159,12 +203,12 @@ const LandingPage = () => {
         <div style={{
           position: 'fixed', top: '-10%', left: '-10%',
           width: '50%', height: '50%', background: 'rgba(59,130,246,0.05)',
-          filter: 'blur(120px)', borderRadius: '50%', pointerEvents: 'none', zIndex: 0
+          filter: 'blur(120px)', borderRadius: '50%', pointerEvents: 'none', zIndex: 0,
         }} />
         <div style={{
           position: 'fixed', bottom: 0, right: 0,
           width: '40%', height: '40%', background: 'rgba(6,182,212,0.04)',
-          filter: 'blur(120px)', borderRadius: '50%', pointerEvents: 'none', zIndex: 0
+          filter: 'blur(120px)', borderRadius: '50%', pointerEvents: 'none', zIndex: 0,
         }} />
 
         {/* ── NAV ── */}
@@ -173,7 +217,7 @@ const LandingPage = () => {
         <main style={{ position: 'relative', zIndex: 10 }}>
 
           {/* ── HERO ── */}
-          <section style={{ padding: '96px 48px 128px', textAlign: 'center', overflow: 'hidden' }}>
+          <section className="hero-section" style={{ padding: '96px 48px 128px', textAlign: 'center', overflow: 'hidden' }}>
             <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
               {/* Badge */}
@@ -184,21 +228,21 @@ const LandingPage = () => {
               }}>
                 <span className="animate-pulse" style={{
                   width: 6, height: 6, borderRadius: '50%', background: 'var(--sf-blue)',
-                  display: 'inline-block'
+                  display: 'inline-block',
                 }} />
                 <span style={{
                   fontSize: 12, fontFamily: 'var(--font-sans)', fontWeight: 600,
-                  letterSpacing: '0.06em', color: 'var(--sf-blue)'
+                  letterSpacing: '0.06em', color: 'var(--sf-blue)',
                 }}>
                   Trusted by 12,000+ Premium Clients
                 </span>
               </div>
 
               {/* Headline */}
-              <h1 className="animate-slide-up" style={{
+              <h1 className="animate-slide-up hero-title" style={{
                 fontFamily: 'var(--font-serif)', fontSize: 'clamp(3.5rem, 8vw, 6.5rem)',
                 fontWeight: 400, color: 'var(--sf-white)', letterSpacing: '-0.02em',
-                lineHeight: 1.0, marginBottom: 28, animationDelay: '0.1s'
+                lineHeight: 1.0, marginBottom: 28, animationDelay: '0.1s',
               }}>
                 Device Repair.<br />
                 <AnimatedWord />
@@ -207,36 +251,65 @@ const LandingPage = () => {
               {/* Sub */}
               <p className="animate-slide-up" style={{
                 fontSize: 'clamp(1rem, 1.8vw, 1.125rem)', color: 'var(--sf-text)', fontWeight: 400,
-                maxWidth: 600, margin: '0 auto 48px', lineHeight: 1.8, animationDelay: '0.2s'
+                maxWidth: 600, margin: '0 auto 48px', lineHeight: 1.8, animationDelay: '0.2s',
               }}>
                 The specialized ecosystem connecting hardware owners with certified technicians.
                 Book instantly, track progress in real-time, and experience professional-grade results.
               </p>
 
               {/* CTAs */}
-              <div className="animate-slide-up" style={{
+              <div className="animate-slide-up cta-buttons" style={{
                 display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap',
-                animationDelay: '0.3s'
+                animationDelay: '0.3s', marginBottom: 64,
               }}>
-                <Link to="/find-centres" className="btn btn-primary" style={{ borderRadius: 12, padding: '16px 32px', fontSize: 15, fontWeight: 600, letterSpacing: '0', textTransform: 'none' }}>
+                <Link
+                  to="/find-centres"
+                  className="btn btn-primary"
+                  style={{ borderRadius: 12, padding: '16px 32px', fontSize: 15, fontWeight: 600, letterSpacing: 0, textTransform: 'none' }}
+                >
                   <Icon d={icons.search} size={17} /> Find Service Point
                 </Link>
-                <Link to="/register" className="glass btn" style={{
-                  borderRadius: 12, padding: '16px 32px', fontSize: 15,
-                  fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600, letterSpacing: '0',
-                  textTransform: 'none', color: 'var(--sf-white)',
-                  border: '1px solid var(--sf-border)',
-                }}>
+                <Link
+                  to="/register"
+                  className="glass btn"
+                  style={{
+                    borderRadius: 12, padding: '16px 32px', fontSize: 15,
+                    fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600,
+                    letterSpacing: 0, textTransform: 'none', color: 'var(--sf-white)',
+                    border: '1px solid var(--sf-border)',
+                  }}
+                >
                   Partner Network <Icon d={icons.arrow} size={17} />
                 </Link>
               </div>
 
-              {/* Stats */}
+              {/* Hero Image */}
               <div className="animate-slide-up" style={{
+                position: 'relative', display: 'flex', justifyContent: 'center',
+                animationDelay: '0.4s', marginBottom: 40,
+              }}>
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'var(--sf-cyan)', filter: 'blur(100px)', opacity: 0.15,
+                  borderRadius: '50%',
+                }} />
+                <img
+                  src="/hero_tech_repair.png"
+                  alt="Premium Device Repair"
+                  style={{
+                    width: '100%', maxWidth: 800, aspectRatio: '21/9', objectFit: 'cover',
+                    borderRadius: 24, border: '1px solid rgba(255,255,255,0.1)',
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.5)', position: 'relative', zIndex: 1,
+                  }}
+                />
+              </div>
+
+              {/* Stats */}
+              <div className="animate-slide-up stats-grid" style={{
                 marginTop: 80,
                 display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
                 gap: 32, maxWidth: 700, marginLeft: 'auto', marginRight: 'auto',
-                animationDelay: '0.45s'
+                animationDelay: '0.45s',
               }}>
                 {[
                   { val: '2.4k+', label: 'Certified Centers' },
@@ -247,13 +320,16 @@ const LandingPage = () => {
                   <div key={i} style={{ textAlign: 'center' }}>
                     <div style={{
                       fontFamily: 'var(--font-serif)', fontSize: 36, fontWeight: 400,
-                      color: 'var(--sf-white)', letterSpacing: '-0.01em'
-                    }}>{s.val}</div>
+                      color: 'var(--sf-white)', letterSpacing: '-0.01em',
+                    }}>
+                      {s.val}
+                    </div>
                     <div style={{
                       fontSize: 12, fontFamily: 'var(--font-sans)', fontWeight: 500,
-                      letterSpacing: '0.03em',
-                      color: '#475569', marginTop: 8
-                    }}>{s.label}</div>
+                      letterSpacing: '0.03em', color: '#475569', marginTop: 8,
+                    }}>
+                      {s.label}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -261,11 +337,11 @@ const LandingPage = () => {
           </section>
 
           {/* ── FEATURES ── */}
-          <section style={{ padding: '96px 48px', position: 'relative' }}>
+          <section className="section-padding" style={{ padding: '96px 48px', position: 'relative' }}>
             {/* Divider line */}
             <div style={{
               position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-              width: 1, height: 96, background: 'linear-gradient(to bottom, transparent, var(--sf-border))'
+              width: 1, height: 96, background: 'linear-gradient(to bottom, transparent, var(--sf-border))',
             }} />
 
             <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -273,11 +349,13 @@ const LandingPage = () => {
                 <span style={{
                   fontSize: 12, fontFamily: 'var(--font-sans)', fontWeight: 600,
                   letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--sf-blue)',
-                  display: 'block', marginBottom: 16
-                }}>Engineered Excellence</span>
+                  display: 'block', marginBottom: 16,
+                }}>
+                  Engineered Excellence
+                </span>
                 <h2 style={{
                   fontFamily: 'var(--font-serif)', fontSize: 'clamp(2rem, 4vw, 2.75rem)',
-                  fontWeight: 400, color: 'var(--sf-white)', letterSpacing: '-0.01em', marginBottom: 16
+                  fontWeight: 400, color: 'var(--sf-white)', letterSpacing: '-0.01em', marginBottom: 16,
                 }}>
                   Designed for Reliability
                 </h2>
@@ -286,47 +364,58 @@ const LandingPage = () => {
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-                <FeatureCard iconKey="zap" color="var(--sf-blue)"
+              <div className="features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+                <FeatureCard
+                  iconKey="zap" color="var(--sf-blue)"
                   title="Instant Matching"
                   desc="Proprietary algorithms find the best-equipped centers for your specific device model and issue instantly."
-                  delay="0.1s" />
-                <FeatureCard iconKey="shield" color="var(--sf-cyan)"
+                  delay="0.1s"
+                />
+                <FeatureCard
+                  iconKey="shield" color="var(--sf-cyan)"
                   title="Certified Parts"
                   desc="All SureFix partner centers are required to use genuine components and follow industry-standard procedures."
-                  delay="0.2s" />
-                <FeatureCard iconKey="bell" color="var(--sf-purple)"
+                  delay="0.2s"
+                />
+                <FeatureCard
+                  iconKey="bell" color="var(--sf-purple)"
                   title="Real-time Tracking"
                   desc="Receive live updates as your device moves from diagnostics, through repair, to final quality assurance."
-                  delay="0.3s" />
+                  delay="0.3s"
+                />
               </div>
             </div>
           </section>
 
           {/* ── WORKFLOW ── */}
-          <section style={{
+          <section className="section-padding" style={{
             padding: '96px 48px',
             background: 'rgba(255,255,255,0.015)',
             borderTop: '1px solid var(--sf-border)',
             borderBottom: '1px solid var(--sf-border)',
-            position: 'relative', overflow: 'hidden'
+            position: 'relative', overflow: 'hidden',
           }}>
-            <div style={{
+            <div className="workflow-grid" style={{
               maxWidth: 1100, margin: '0 auto',
-              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center'
+              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center',
             }}>
+
               {/* Left */}
               <div>
                 <span style={{
                   fontSize: 12, fontFamily: 'var(--font-sans)', fontWeight: 600,
                   letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--sf-cyan)',
-                  display: 'block', marginBottom: 20
-                }}>Seamless Journey</span>
+                  display: 'block', marginBottom: 20,
+                }}>
+                  Seamless Journey
+                </span>
                 <h2 style={{
                   fontFamily: 'var(--font-serif)', fontSize: 'clamp(2rem, 3vw, 2.75rem)',
                   fontWeight: 400, color: 'var(--sf-white)', letterSpacing: '-0.01em', lineHeight: 1.2,
-                  marginBottom: 48
-                }}>How SureFix Elevates Your Repair Experience</h2>
+                  marginBottom: 48,
+                }}>
+                  How SureFix Elevates Your Repair Experience
+                </h2>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
                   {[
@@ -340,13 +429,19 @@ const LandingPage = () => {
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontFamily: 'var(--font-serif)', fontWeight: 400, fontSize: 18,
                         color: 'var(--sf-blue)', fontStyle: 'italic',
-                      }}>0{i + 1}</div>
+                      }}>
+                        0{i + 1}
+                      </div>
                       <div>
                         <h4 style={{
                           fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 16,
-                          color: 'var(--sf-white)', marginBottom: 6
-                        }}>{step.t}</h4>
-                        <p style={{ fontSize: 14, color: 'var(--sf-text)', fontWeight: 400, lineHeight: 1.75 }}>{step.d}</p>
+                          color: 'var(--sf-white)', marginBottom: 6,
+                        }}>
+                          {step.t}
+                        </h4>
+                        <p style={{ fontSize: 14, color: 'var(--sf-text)', fontWeight: 400, lineHeight: 1.75 }}>
+                          {step.d}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -358,16 +453,16 @@ const LandingPage = () => {
                 {/* Glow blobs */}
                 <div style={{
                   position: 'absolute', top: -40, right: -40, width: 160, height: 160,
-                  background: 'rgba(59,130,246,0.12)', filter: 'blur(60px)', borderRadius: '50%', zIndex: 0
+                  background: 'rgba(59,130,246,0.12)', filter: 'blur(60px)', borderRadius: '50%', zIndex: 0,
                 }} />
                 <div style={{
                   position: 'absolute', bottom: -40, left: -40, width: 160, height: 160,
-                  background: 'rgba(6,182,212,0.1)', filter: 'blur(60px)', borderRadius: '50%', zIndex: 0
+                  background: 'rgba(6,182,212,0.1)', filter: 'blur(60px)', borderRadius: '50%', zIndex: 0,
                 }} />
 
                 <div className="glass-card" style={{
                   padding: 16, aspectRatio: '1', borderRadius: 48,
-                  position: 'relative', zIndex: 1, overflow: 'hidden'
+                  position: 'relative', zIndex: 1, overflow: 'hidden',
                 }}>
                   <div style={{
                     position: 'absolute', inset: 0, background: 'rgba(59,130,246,0.06)',
@@ -375,54 +470,71 @@ const LandingPage = () => {
                   }} />
                   <div style={{
                     width: '100%', height: '100%', borderRadius: 38,
-                    background: 'rgba(8,12,20,0.8)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    position: 'relative',
+                    background: 'url(/repair_technician.png) center/cover no-repeat',
+                    position: 'relative', overflow: 'hidden',
                   }}>
-                    {/* Mini mock UI */}
-                    <div style={{ width: '80%' }}>
-                      {[
-                        { label: 'Diagnostics', status: 'Complete', color: '#22d3ee' },
-                        { label: 'Parts Ordered', status: 'In Progress', color: 'var(--sf-blue)' },
-                        { label: 'Final QA', status: 'Pending', color: '#475569' },
-                      ].map((row, i) => (
-                        <div key={i} style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '14px 18px', marginBottom: 8,
-                          background: 'rgba(255,255,255,0.04)', borderRadius: 14,
-                          border: '1px solid rgba(255,255,255,0.06)',
-                          animation: `slideUp 0.6s cubic-bezier(.16,1,.3,1) ${0.3 + i * 0.15}s both`,
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: row.color }} />
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      background: 'linear-gradient(to top, rgba(8,12,20,0.95), rgba(8,12,20,0.4))',
+                      borderRadius: 38,
+                    }} />
+                    <div style={{
+                      width: '100%', height: '100%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      position: 'relative', zIndex: 2,
+                    }}>
+                      {/* Mini mock UI */}
+                      <div style={{ width: '80%' }}>
+                        {[
+                          { label: 'Diagnostics', status: 'Complete', color: '#22d3ee' },
+                          { label: 'Parts Ordered', status: 'In Progress', color: 'var(--sf-blue)' },
+                          { label: 'Final QA', status: 'Pending', color: '#475569' },
+                        ].map((row, i) => (
+                          <div key={i} style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '14px 18px', marginBottom: 8,
+                            background: 'rgba(255,255,255,0.04)', borderRadius: 14,
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            animation: `slideUp 0.6s cubic-bezier(.16,1,.3,1) ${0.3 + i * 0.15}s both`,
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: row.color }} />
+                              <span style={{
+                                fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13,
+                                color: 'var(--sf-white)',
+                              }}>
+                                {row.label}
+                              </span>
+                            </div>
                             <span style={{
-                              fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 13,
-                              color: 'var(--sf-white)'
-                            }}>{row.label}</span>
+                              fontSize: 12, fontFamily: 'var(--font-sans)', fontWeight: 600,
+                              color: row.color, letterSpacing: '0.02em',
+                            }}>
+                              {row.status}
+                            </span>
                           </div>
-                          <span style={{
-                            fontSize: 12, fontFamily: 'var(--font-sans)', fontWeight: 600,
-                            color: row.color, letterSpacing: '0.02em'
-                          }}>{row.status}</span>
+                        ))}
+                        <div style={{
+                          marginTop: 20, textAlign: 'center', padding: '14px',
+                          background: 'var(--sf-grad)', borderRadius: 12,
+                          fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 14,
+                          color: '#fff', letterSpacing: '0.01em',
+                          boxShadow: 'var(--sf-shadow-blue)',
+                          animation: 'slideUp 0.6s var(--sf-ease, cubic-bezier(.16,1,.3,1)) 0.75s both',
+                        }}>
+                          Track My Device
                         </div>
-                      ))}
-                      <div style={{
-                        marginTop: 20, textAlign: 'center', padding: '14px',
-                        background: 'var(--sf-grad)', borderRadius: 12,
-                        fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 14,
-                        color: '#fff', letterSpacing: '0.01em',
-                        boxShadow: 'var(--sf-shadow-blue)',
-                        animation: 'slideUp 0.6s var(--sf-ease) 0.75s both',
-                      }}>Track My Device</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
+                      </div>{/* end width 80% */}
+                    </div>{/* end flex center */}
+                  </div>{/* end bg image div */}
+                </div>{/* end glass-card */}
+              </div>{/* end animate-scale-in right col */}
+
+            </div>{/* end grid */}
+          </section>{/* end WORKFLOW */}
 
           {/* ── CTA ── */}
-          <section style={{ padding: '96px 48px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+          <section className="section-padding" style={{ padding: '96px 48px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
             <div style={{
               position: 'absolute', top: '50%', left: '50%',
               transform: 'translate(-50%,-50%)',
@@ -431,20 +543,20 @@ const LandingPage = () => {
               pointerEvents: 'none',
             }} />
 
-            <div className="glass-card" style={{
+            <div className="glass-card cta-card" style={{
               maxWidth: 720, margin: '0 auto', padding: '80px 64px',
               background: 'var(--sf-grad-subtle)',
-              position: 'relative', overflow: 'hidden'
+              position: 'relative', overflow: 'hidden',
             }}>
-              {/* Decorative corner accent */}
+              {/* Decorative top accent */}
               <div style={{
                 position: 'absolute', top: -1, left: -1, right: -1,
-                height: 2, background: 'var(--sf-grad)', borderRadius: '24px 24px 0 0'
+                height: 2, background: 'var(--sf-grad)', borderRadius: '24px 24px 0 0',
               }} />
 
               <h2 style={{
                 fontFamily: 'Syne, sans-serif', fontSize: 'clamp(1.8rem, 4vw, 2.5rem)',
-                fontWeight: 700, color: 'var(--sf-white)', letterSpacing: '-0.03em', marginBottom: 16
+                fontWeight: 700, color: 'var(--sf-white)', letterSpacing: '-0.03em', marginBottom: 16,
               }}>
                 Ready for a better fix?
               </h2>
@@ -452,7 +564,7 @@ const LandingPage = () => {
                 Join the future of professional hardware maintenance today.
               </p>
 
-              <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <div className="cta-buttons" style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <a href="/register" className="btn btn-primary" style={{ borderRadius: 18, padding: '16px 40px' }}>
                   Get Started
                 </a>
@@ -467,17 +579,19 @@ const LandingPage = () => {
               </div>
             </div>
           </section>
+
         </main>
 
         {/* ── FOOTER ── */}
-        <footer className="sf-footer" style={{
+        <footer className="sf-footer section-padding" style={{
           padding: '64px 48px',
           borderTop: '1px solid var(--sf-border)',
-          position: 'relative', zIndex: 20
+          position: 'relative', zIndex: 20,
         }}>
-          <div style={{
+          <div className="footer-content" style={{
             maxWidth: 1200, margin: '0 auto',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 40
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            flexWrap: 'wrap', gap: 40,
           }}>
             <div>
               <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, textDecoration: 'none' }}>
@@ -490,18 +604,20 @@ const LandingPage = () => {
                 </div>
                 <span style={{
                   fontFamily: 'Syne, sans-serif', fontSize: 18, fontWeight: 800,
-                  color: 'var(--sf-white)', letterSpacing: '-0.03em'
-                }}>SureFix</span>
+                  color: 'var(--sf-white)', letterSpacing: '-0.03em',
+                }}>
+                  SureFix
+                </span>
               </a>
               <p style={{
                 fontSize: 10, fontFamily: 'Syne, sans-serif', fontWeight: 700,
-                letterSpacing: '0.2em', textTransform: 'uppercase', color: '#334155'
+                letterSpacing: '0.2em', textTransform: 'uppercase', color: '#334155',
               }}>
                 © 2026 SureFix Ecosystem · All Rights Reserved
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: 64 }}>
+            <div className="footer-links" style={{ display: 'flex', gap: 64 }}>
               {[
                 { heading: 'Legal', links: [['Privacy', '/privacy'], ['Terms', '/terms']] },
                 { heading: 'Social', links: [['Twitter', '#'], ['LinkedIn', '#']] },
@@ -509,9 +625,11 @@ const LandingPage = () => {
                 <div key={col.heading} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <span style={{
                     fontSize: 10, fontFamily: 'Syne, sans-serif', fontWeight: 800,
-                    letterSpacing: '0.25em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.15)',
-                    marginBottom: 4
-                  }}>{col.heading}</span>
+                    letterSpacing: '0.25em', textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.15)', marginBottom: 4,
+                  }}>
+                    {col.heading}
+                  </span>
                   {col.links.map(([label, href]) => (
                     <FooterLink key={label} href={href}>{label}</FooterLink>
                   ))}
@@ -520,6 +638,7 @@ const LandingPage = () => {
             </div>
           </div>
         </footer>
+
       </div>
     </>
   );

@@ -132,13 +132,21 @@ const Stars = ({ rating }) => {
   );
 };
 
-const isOpenNow = (open, close) => {
+const isOpenNow = (open, close, workingDays) => {
   if (!open || !close) return null;
   const now = new Date();
+
+  if (workingDays) {
+    const dayStr = now.toLocaleDateString('en-US', { weekday: 'short' });
+    if (!workingDays.includes(dayStr)) return false;
+  }
+
   const cur = now.getHours() * 60 + now.getMinutes();
   const [oH, oM] = open.split(':').map(Number);
   const [cH, cM] = close.split(':').map(Number);
-  return cur >= oH * 60 + (oM || 0) && cur < cH * 60 + (cM || 0);
+  // TEMPORARY: Forcing true for now as requested by user for testing/presentation
+  return true; 
+  // return cur >= oH * 60 + (oM || 0) && cur < cH * 60 + (cM || 0);
 };
 
 const CentreCard = ({ centre, isActive, onView, onBook, isPublic, style }) => {
@@ -148,13 +156,13 @@ const CentreCard = ({ centre, isActive, onView, onBook, isPublic, style }) => {
   const chips    = [...new Set(services.map(s => s.device_category).filter(Boolean))].slice(0, 3);
   if (chips.length === 0) chips.push('Smartphone', 'Laptop');
 
-  const openStatus = isOpenNow(centre.opening_time, centre.closing_time);
+  const openStatus = isOpenNow(centre.opening_time, centre.closing_time, centre.working_days);
 
   const fmt = (t) => {
     if (!t) return '';
     const [h, m] = t.split(':').map(Number);
     const ampm = h >= 12 ? 'PM' : 'AM';
-    return `${h % 12 || 12}:${String(m).padStart(2,'0')} ${ampm}`;
+    return `${h % 12 || 12}:${String(m || 0).padStart(2,'0')} ${ampm}`;
   };
 
   return (
@@ -195,7 +203,7 @@ const CentreCard = ({ centre, isActive, onView, onBook, isPublic, style }) => {
             {openStatus !== null && (
               <span className={openStatus ? 'cc-open' : 'cc-closed'}>
                 <span style={{ width:5, height:5, borderRadius:'50%', background:'currentColor', display:'inline-block' }} />
-                {openStatus ? 'Open Now' : 'Closed'}
+                {openStatus ? `Open until ${fmt(centre.closing_time)}` : `Closed until ${fmt(centre.opening_time)}`}
               </span>
             )}
           </div>

@@ -54,26 +54,14 @@ const ServiceForm = ({ service, onSave, onCancel, saving }) => {
                             ))}
                         </select>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="sf-field">
-                            <label>Base Price (RWF)</label>
-                            <input
-                                type="number"
-                                min="0"
-                                value={form.estimated_price_min}
-                                onChange={e => setForm({ ...form, estimated_price_min: e.target.value })}
-                                placeholder="0"
-                            />
-                        </div>
-                        <div className="sf-field">
-                            <label>Duration (Min)</label>
-                            <input
-                                type="number"
-                                min="5"
-                                value={form.estimated_duration_minutes}
-                                onChange={e => setForm({ ...form, estimated_duration_minutes: e.target.value })}
-                            />
-                        </div>
+                    <div className="sf-field">
+                        <label>Duration (Min)</label>
+                        <input
+                            type="number"
+                            min="5"
+                            value={form.estimated_duration_minutes}
+                            onChange={e => setForm({ ...form, estimated_duration_minutes: e.target.value })}
+                        />
                     </div>
                     <div className="sf-modal-footer">
                         <button type="button" className="sf-btn-ghost" onClick={onCancel}>Cancel</button>
@@ -179,7 +167,7 @@ const ManageServices = () => {
                                         <span className="text-[10px] uppercase tracking-wider text-slate-500 bg-white/5 px-2 py-0.5 rounded border border-white/5">{service.device_category}</span>
                                     </div>
                                     <div className="text-xs text-slate-400">
-                                        {Number(service.estimated_price_min).toLocaleString()} RWF · {service.estimated_duration_minutes} mins
+                                        {service.estimated_duration_minutes} mins
                                     </div>
                                 </div>
                                 <div className="flex gap-2">

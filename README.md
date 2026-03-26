@@ -277,10 +277,13 @@ Emails are sent via Nodemailer (non-blocking, won't fail the API response).
 - [x] Device ownership verification
 - [x] Service-to-centre validation
 - [x] Booking reference generation (e.g. SFAB12CD34)
+- [x] SMS notifications for booking, confirmation, and reminders
+- [x] Africa's Talking (Primary) & Twilio (Fallback) integration
+- [x] In-app SMS Simulator/Inbox for testing
 
 ### Out of Scope (by design)
 - ❌ Payment processing (pay at centre)
-- ❌ SMS notifications
+- ✅ SMS notifications (Africa's Talking + Twilio)
 - ❌ Mobile app
 - ❌ Admin dashboard
 

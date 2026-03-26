@@ -17,17 +17,18 @@ const CustomTooltip = ({ active, payload, label }) => {
         return (
             <div className="bg-[#111827] border border-gray-700 p-3 rounded-lg shadow-xl">
                 <p className="text-gray-300 text-xs font-bold mb-2">{label}</p>
-                {payload.map((entry, index) => (
-                    <div key={index} className="flex items-center gap-2 text-xs">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                        <span className="text-gray-400 capitalize">{entry.name}:</span>
-                        <span className="text-white font-mono font-bold">
-                            {entry.name === 'revenue'
-                                ? `RWF ${Number(entry.value).toLocaleString()}`
-                                : entry.value}
-                        </span>
-                    </div>
-                ))}
+                {payload.map((entry, index) => {
+                    if (entry.name === 'revenue') return null;
+                    return (
+                        <div key={index} className="flex items-center gap-2 text-xs">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                            <span className="text-gray-400 capitalize">{entry.name}:</span>
+                            <span className="text-white font-mono font-bold">
+                                {entry.value}
+                            </span>
+                        </div>
+                    );
+                })}
             </div>
         );
     }
@@ -54,10 +55,6 @@ const AdminAnalytics = ({ analytics }) => {
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={monthly_stats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <defs>
-                                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                                </linearGradient>
                                 <linearGradient id="colorAppt" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
                                     <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
@@ -77,15 +74,6 @@ const AdminAnalytics = ({ analytics }) => {
                             />
                             <YAxis stroke="#9CA3AF" fontSize={10} tickLine={false} axisLine={false} />
                             <RechartsTooltip content={<CustomTooltip />} />
-                            <Area
-                                type="monotone"
-                                dataKey="revenue"
-                                name="Revenue"
-                                stroke="#10B981"
-                                fillOpacity={1}
-                                fill="url(#colorRevenue)"
-                                strokeWidth={2}
-                            />
                             <Area
                                 type="monotone"
                                 dataKey="appointments"

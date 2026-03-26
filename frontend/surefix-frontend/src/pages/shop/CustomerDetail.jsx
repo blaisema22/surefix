@@ -1,133 +1,152 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { appointmentAPI } from '../../api/appointments.api';
 import { timeAgo } from '../../utils/time';
+import { ArrowLeft, Mail, Phone, Calendar, Clock, MapPin, Hash } from 'lucide-react';
+import '../../styles/sf-pages.css';
 
-const styles = {
-    container: { display: 'flex', justifyContent: 'center', width: '100%' },
-    wrapper: { width: '100%', maxWidth: 940, padding: '36px 40px', paddingBottom: 100 },
-    header: { borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1.5rem', marginBottom: '2rem' },
-    title: { margin: 0, color: '#fff' },
-    link: { color: '#3b82f6', textDecoration: 'none' },
-    grid: { display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' },
-    customerInfo: { backgroundColor: '#1e1e1e', padding: '1.5rem', borderRadius: '8px', border: '1px solid #333' },
-    infoItem: { marginBottom: '1rem', fontSize: '0.95rem' },
-    infoLabel: { color: '#888', display: 'block', fontSize: '0.8rem', marginBottom: '0.25rem' },
-    appointmentList: { display: 'flex', flexDirection: 'column', gap: '1rem' },
-    card: { backgroundColor: '#1e1e1e', borderRadius: '8px', padding: '1.5rem', border: '1px solid #333' },
-    cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' },
-    serviceName: { margin: 0, fontSize: '1.1rem', color: '#fff' },
-    statusBadge: { padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 'bold' },
-    noData: { textAlign: 'center', padding: '3rem', color: '#666', border: '2px dashed #333', borderRadius: '8px' },
-};
-
-const statusColors = {
-    pending: '#ffc107',
-    confirmed: '#28a745',
-    in_progress: '#17a2b8',
-    completed: '#6c757d',
-    cancelled: '#dc3545'
+const STATUS_STYLES = {
+    pending: { bg: 'rgba(245,158,11,0.1)', color: 'rgba(251,191,36,0.85)', label: 'Pending' },
+    confirmed: { bg: 'rgba(59,130,246,0.1)', color: 'rgba(96,165,250,0.85)', label: 'Confirmed' },
+    in_progress: { bg: 'rgba(139,92,246,0.1)', color: 'rgba(167,139,250,0.85)', label: 'In Progress' },
+    completed: { bg: 'rgba(34,197,94,0.1)', color: 'rgba(74,222,128,0.85)', label: 'Completed' },
+    cancelled: { bg: 'rgba(239,68,68,0.08)', color: 'rgba(252,165,165,0.75)', label: 'Cancelled' },
 };
 
 const CustomerDetail = () => {
     const location = useLocation();
     const customer = location.state?.customer;
-
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
-        if (!customer) {
-            setError('No customer data found. Please go back to the customers list.');
-            setLoading(false);
-            return;
-        }
+      if (!customer) { setError('No customer data. Go back and try again.'); setLoading(false); return; }
+      (async () => {
+          try {
+              const res = await appointmentAPI.getShopAppointments();
+              if (res.success) setAppointments((res.appointments || []).filter(a => a.user_id === customer.user_id));
+              else setError('Failed to load appointment history.');
+          } catch { setError('An error occurred while fetching appointments.'); }
+          finally { setLoading(false); }
+      })();
+  }, [customer]);
 
-        const fetchAppointments = async () => {
-            try {
-                const response = await appointmentAPI.getShopAppointments();
-                if (response.success) {
-                    const customerAppointments = response.appointments.filter(
-                        app => app.user_id === customer.user_id
-                    );
-                    setAppointments(customerAppointments);
-                } else {
-                    setError('Failed to load appointment history.');
-                }
-            } catch (err) {
-                setError('An error occurred while fetching appointments.');
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAppointments();
-    }, [customer]);
-
-    if (!customer) {
-        return (
-            <div style={styles.container}>
-                <div style={styles.wrapper}>
-                <div style={styles.noData}>
-                    <h2>Customer Not Found</h2>
-                    <p>{error}</p>
-                    <Link to="/shop/customers" style={styles.link}>Back to Customers</Link>
+    if (!customer) return (
+        <div className="sf-page" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <div className="sf-page-wrap">
+                <div className="sf-empty">
+                    <div className="sf-empty-title">Customer Not Found</div>
+                    <p className="sf-empty-sub">{error}</p>
+                    <Link to="/shop/customers" className="sf-btn-primary" style={{ textDecoration: 'none' }}>
+                        Back to Customers
+                    </Link>
                 </div>
-                </div>
-            </div>
-        );
-    }
-
-    // ✅ FIX 1: Removed the stray ); that was closing the return too early
-    return (
-        <div style={styles.container}>
-            <div style={styles.wrapper} className="sf-anim-up">
-            <div style={styles.header}>
-                <h2 style={styles.title}>{customer.name}</h2>
-                <Link to="/shop/customers" style={styles.link}>&larr; Back to Customer List</Link>
-            </div>
-
-            <div style={styles.grid}>
-                <div style={styles.customerInfo}>
-                    <h3>Customer Details</h3>
-                    <div style={styles.infoItem}><span style={styles.infoLabel}>Email</span> {customer.email}</div>
-                    <div style={styles.infoItem}><span style={styles.infoLabel}>Phone</span> {customer.phone || 'N/A'}</div>
-                    <div style={styles.infoItem}><span style={styles.infoLabel}>Member Since</span> {customer.member_since ? new Date(customer.member_since).toLocaleDateString() : 'N/A'}</div>
-                    <div style={styles.infoItem}><span style={styles.infoLabel}>Total Bookings</span> {customer.total_bookings}</div>
-                    <div style={styles.infoItem}><span style={styles.infoLabel}>Last Visit</span> {timeAgo(customer.last_appointment || customer.last_visit)}</div>
-                </div>
-
-                <div>
-                    <h3>Appointment History ({appointments.length})</h3>
-                    {loading && <p>Loading history...</p>}
-                    {error && <p style={{ color: 'red' }}>{error}</p>}
-                    {!loading && (
-                        appointments.length === 0 ? (
-                            <div style={styles.noData}>No appointment history found for this customer.</div>
-                        ) : (
-                            <div style={styles.appointmentList}>
-                                {appointments.map(app => (
-                                    <div key={app.appointment_id} style={styles.card}>
-                                        <div style={styles.cardHeader}>
-                                            <h4 style={styles.serviceName}>{app.service_name}</h4>
-                                            <span style={{ ...styles.statusBadge, backgroundColor: statusColors[app.status] || '#555', color: app.status === 'pending' ? 'black' : 'white' }}>{app.status}</span>
-                                        </div>
-                                        <div><strong>Device:</strong> {app.device_brand} {app.device_model}</div>
-                                        <div><strong>Date:</strong> {new Date(app.appointment_date).toLocaleDateString()} at {app.appointment_time.slice(0, 5)}</div>
-                                        <div><strong>Booking Ref:</strong> {app.booking_reference}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )
-                    )}
-                </div>
-            </div>
             </div>
         </div>
-        // ✅ FIX 2: Removed the misplaced ); that appeared here inside the JSX
     );
+
+    return (
+      <div className="sf-page" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <div className="sf-page-wrap">
+
+              {/* Back */}
+              <Link to="/shop/customers" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'rgba(255,255,255,0.35)', textDecoration: 'none', marginBottom: 24, fontWeight: 600, transition: 'color 0.18s' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'rgba(249,115,22,0.8)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
+              >
+                  <ArrowLeft size={14} /> Back to Customers
+              </Link>
+
+              {/* Header */}
+              <div className="sf-anim-up" style={{ marginBottom: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 6 }}>
+                      <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg,rgba(249,115,22,0.25),rgba(234,88,12,0.15))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#f97316', flexShrink: 0 }}>
+                          {customer.name?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                          <h1 className="sf-page-title" style={{ margin: 0 }}>{customer.name}</h1>
+                          <p className="sf-page-sub" style={{ margin: 0 }}>Customer profile</p>
+                      </div>
+                  </div>
+              </div>
+
+              {/* 2-col layout */}
+              <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 16, alignItems: 'start' }}>
+
+                  {/* Profile card */}
+                  <div className="sf-glass sf-anim-up sf-s1">
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', marginBottom: 16 }}>Details</div>
+                      {[
+                          { Icon: Mail, label: 'Email', value: customer.email },
+                          { Icon: Phone, label: 'Phone', value: customer.phone || 'N/A' },
+                          { Icon: Calendar, label: 'Member Since', value: customer.member_since ? new Date(customer.member_since).toLocaleDateString() : 'N/A' },
+                          { Icon: Hash, label: 'Total Bookings', value: customer.total_bookings },
+                          { Icon: Clock, label: 'Last Visit', value: timeAgo(customer.last_appointment || customer.last_visit) },
+                      ].map(({ Icon, label, value }) => (
+                          <div key={label} style={{ marginBottom: 14 }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                  <Icon size={10} /> {label}
+                              </div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>{value}</div>
+                          </div>
+                      ))}
+                  </div>
+
+                  {/* Appointment history */}
+                  <div className="sf-anim-up sf-s2">
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', marginBottom: 14 }}>
+                          Appointment History ({appointments.length})
+                      </div>
+
+                      {loading ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {[1, 2, 3].map(i => <div key={i} className="sf-skeleton" style={{ height: 80 }} />)}
+                          </div>
+                      ) : error ? (
+                          <div className="sf-error">{error}</div>
+                      ) : appointments.length === 0 ? (
+                          <div className="sf-empty">
+                              <div className="sf-empty-icon"><Calendar size={20} /></div>
+                              <p className="sf-empty-sub" style={{ marginBottom: 0 }}>No appointment history for this customer.</p>
+                          </div>
+                      ) : (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                          {appointments.map((app, i) => {
+                                              const st = STATUS_STYLES[app.status] || STATUS_STYLES.pending;
+                                              return (
+                                                  <div key={app.appointment_id} className={`sf-glass sf-anim-up sf-s${Math.min(i + 1, 6)}`} style={{ padding: '16px 18px' }}>
+                                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                                                          <span style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>{app.service_name}</span>
+                                                          <span style={{ padding: '3px 10px', borderRadius: 20, background: st.bg, color: st.color, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                                                              {st.label}
+                                                          </span>
+                                                      </div>
+                                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+                                                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+                                                              <Calendar size={10} /> {new Date(app.appointment_date).toLocaleDateString()}
+                                                          </span>
+                                                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+                                                              <Clock size={10} /> {(app.appointment_time || '').slice(0, 5)}
+                                                          </span>
+                                                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
+                                                              {app.device_brand} {app.device_model}
+                                                          </span>
+                                                          <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.5px' }}>
+                                                              #{app.booking_reference}
+                                                          </span>
+                                                      </div>
+                      </div>
+                    );
+                })}
+                                      </div>
+                      )}
+                  </div>
+
+              </div>
+          </div>
+      </div>
+  );
 };
 
 export default CustomerDetail;

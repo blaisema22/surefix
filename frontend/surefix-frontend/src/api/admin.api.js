@@ -38,19 +38,19 @@ export const getAdminCentres = async() => {
 
 /**
  * Toggles user verification status.
- * API: PUT /api/admin/users/:id/verify
+ * API: PATCH /api/admin/users/:id/verify
  */
 export const toggleUserVerification = async(userId, isVerified) => {
-    const { data } = await api.put(`/admin/users/${userId}/verify`, { is_verified: isVerified });
+    const { data } = await api.patch(`/admin/users/${userId}/verify`, { is_verified: isVerified });
     return data;
 };
 
 /**
  * Toggles user authorization status (official account access).
- * API: PUT /api/admin/users/:id/authorize
+ * API: PATCH /api/admin/users/:id/authorize
  */
 export const toggleUserAuthorization = async(userId, isAuthorized) => {
-    const { data } = await api.put(`/admin/users/${userId}/authorize`, { is_authorized: isAuthorized });
+    const { data } = await api.patch(`/admin/users/${userId}/authorize`, { is_authorized: isAuthorized });
     return data;
 };
 

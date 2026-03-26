@@ -101,6 +101,7 @@ const init = {
     step: 1, loading: false, centre: null, services: [], devices: [],
     selectedService: null, customIssue: '', selectedDevice: null,
     deviceImage: null, imagePreview: null, selectedDate: '', selectedSlot: null,
+    phone: '',
     availableSlots: [], bookedSlots: [], isDeviceFormOpen: false, isDragging: false, isConfirmModalOpen: false,
 };
 
@@ -117,6 +118,7 @@ function reducer(s, a) {
         case 'SET_DATE': return { ...s, selectedDate: a.payload, selectedSlot: null, availableSlots: [], bookedSlots: [] };
         case 'SET_SLOTS': return { ...s, availableSlots: a.available, bookedSlots: a.booked };
         case 'SELECT_SLOT': return { ...s, selectedSlot: a.payload };
+        case 'SET_PHONE': return { ...s, phone: a.payload };
         case 'TOGGLE_FORM': return { ...s, isDeviceFormOpen: a.payload };
         case 'ADD_DEVICE': return { ...s, devices: [...s.devices, a.payload], selectedDevice: a.payload, isDeviceFormOpen: false };
         case 'SET_DRAGGING': return { ...s, isDragging: a.payload };
@@ -174,12 +176,6 @@ const BookingConfirmationModal = ({ s, onConfirm, onCancel }) => {
                         <span className="sf-summ-label">Date & Time</span>
                         <span className="sf-summ-val">{selectedDate} at {selectedSlot}</span>
                     </div>
-                    <div className="sf-summ-row">
-                        <span className="sf-summ-label">Estimated Cost</span>
-                        <span className="sf-summ-val" style={{ color: '#f97316' }}>
-                            {selectedService?.estimated_price_min > 0 ? `${Number(selectedService.estimated_price_min).toLocaleString()} RWF` : 'To be quoted'}
-                        </span>
-                    </div>
 
                     {(customIssue || (selectedService?.service_id === 'other')) && (
                         <>
@@ -218,7 +214,7 @@ const BookRepair = () => {
     const [s, dispatch] = useReducer(reducer, init);
     const { step, loading, centre, services, devices, selectedService, customIssue,
         selectedDevice, deviceImage, imagePreview, selectedDate, selectedSlot, isDragging,
-        availableSlots, bookedSlots } = s;
+        availableSlots, bookedSlots, phone } = s;
 
     useEffect(() => {
         (async () => {
@@ -306,6 +302,7 @@ const BookRepair = () => {
             fd.append('issue_description', selectedService?.service_id === 'other' ? customIssue : selectedService?.service_name);
             if (selectedService?.service_id && selectedService.service_id !== 'other') fd.append('service_id', selectedService.service_id);
             if (deviceImage) fd.append('deviceImage', deviceImage);
+            if (phone || user?.phone) fd.append('phone', phone || user?.phone);
             const res = await appointmentAPI.createAppointment(fd);
             if (res.success) { addToast('Appointment booked!', 'success'); setTimeout(() => navigate('/appointments', { replace: true }), 1500); }
         } catch (err) { addToast(err.response?.data?.message || 'Booking failed', 'error'); dispatch({ type: 'SET_LOADING', payload: false }); }
@@ -347,7 +344,7 @@ const BookRepair = () => {
                             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', marginBottom: 16 }}>
                                 Select a Service
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 24 }}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                                 {[...services, { service_id: 'other', service_name: 'Other Issue', estimated_duration_minutes: 30, estimated_price_min: 0 }].map(srv => {
                                     const sel = selectedService?.service_id === srv.service_id;
                                     return (
@@ -356,9 +353,6 @@ const BookRepair = () => {
                                             <div style={{ fontSize: 14, fontWeight: 700, color: sel ? '#fff' : 'rgba(255,255,255,0.6)', marginBottom: 6 }}>{srv.service_name}</div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>{srv.estimated_duration_minutes} min</span>
-                                                <span style={{ fontSize: 13, fontWeight: 700, color: sel ? '#f97316' : 'rgba(255,255,255,0.3)' }}>
-                                                    {srv.estimated_price_min > 0 ? `${Number(srv.estimated_price_min).toLocaleString()} RWF` : 'Quote'}
-                                                </span>
                                             </div>
                                             {sel && <div style={{ position: 'absolute', top: 14, right: 14 }}><CheckCircle size={15} color="#f97316" /></div>}
                                         </div>
@@ -380,7 +374,7 @@ const BookRepair = () => {
                             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', marginBottom: 16 }}>
                                 Select Your Device
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 24 }}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                                 {devices.map(dev => {
                                     const sel = selectedDevice?.device_id === dev.device_id;
                                     return (
@@ -447,7 +441,7 @@ const BookRepair = () => {
                     {/* ── Step 3: Schedule ── */}
                     {step === 3 && (
                         <div className="sf-anim-scale">
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', marginBottom: 12 }}>Pick a Date</div>
                                     <div className="sf-field">
@@ -464,7 +458,7 @@ const BookRepair = () => {
                                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', marginBottom: 12 }}>Available Times</div>
                                     {selectedDate ? (
                                         (availableSlots.length || bookedSlots.length) ? (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                                 {[...availableSlots, ...bookedSlots].sort().map(slot => {
                                                     const booked = bookedSlots.includes(slot);
                                                     const sel = selectedSlot === slot;
@@ -504,14 +498,13 @@ const BookRepair = () => {
                     {step === 4 && (
                         <div className="sf-anim-scale">
                             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', marginBottom: 16 }}>Review & Confirm</div>
-                            <div className="sf-glass" style={{ marginBottom: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                            <div className="sf-glass grid grid-cols-1 sm:grid-cols-2 gap-5 mb-4">
                                 {[
                                     { label: 'Service', value: selectedService?.service_name },
                                     { label: 'Device', value: `${selectedDevice?.brand} ${selectedDevice?.model}` },
                                     { label: 'Date', value: selectedDate ? new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) : '' },
                                     { label: 'Time', value: selectedSlot },
                                     { label: 'Centre', value: centre?.name },
-                                    { label: 'Estimate', value: selectedService?.estimated_price_min > 0 ? `${Number(selectedService.estimated_price_min).toLocaleString()} RWF` : 'To be quoted', highlight: true },
                                 ].map(({ label, value, highlight }) => (
                                     <div key={label}>
                                         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', marginBottom: 5 }}>{label}</div>
@@ -531,6 +524,26 @@ const BookRepair = () => {
                                     Your booking is encrypted and secure. You'll receive a confirmation notification after submission.
                                 </p>
                             </div>
+
+                            {(!user?.phone && !phone) && (
+                                <div className="sf-error animate-shake" style={{ marginTop: 20 }}>
+                                    Please provide a phone number for SMS notifications.
+                                </div>
+                            )}
+
+                            {!user?.phone && (
+                                <div className="sf-field sf-anim-up sf-s3" style={{ marginTop: 24 }}>
+                                    <label style={{ color: 'rgba(249,115,22,0.8)' }}>Contact Phone Number (for SMS Alerts)</label>
+                                    <input 
+                                        type="tel" 
+                                        placeholder="+250 788 000 000" 
+                                        value={phone} 
+                                        onChange={e => dispatch({ type: 'SET_PHONE', payload: e.target.value })} 
+                                        style={{ border: '1px solid rgba(249,115,22,0.3)', background: 'rgba(249,115,22,0.03)' }}
+                                    />
+                                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 4 }}>This number will be saved to your profile for future repairs.</p>
+                                </div>
+                            )}
                         </div>
                     )}
 

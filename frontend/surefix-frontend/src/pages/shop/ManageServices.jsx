@@ -1,483 +1,207 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { shopAPI } from '../../api/shop.api';
-import {
-    Plus,
-    Search,
-    ChevronUp,
-    ChevronDown,
-    Edit3,
-    Trash2,
-    CheckCircle2,
-    XCircle,
-    Clock,
-    Layers,
-    Save,
-    X,
-    Settings,
-    DollarSign,
-    ShieldCheck
-} from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { getMyServices, addService, updateService, deleteService } from '../../api/shop';
+import { Plus, Edit3, Trash2, Search, Clock, CheckCircle, XCircle, Layers, RefreshCw } from 'lucide-react';
+import '../../styles/sf-pages.css';
 
-const DEVICE_CATEGORIES = ['smartphone', 'tablet', 'laptop', 'desktop', 'other'];
+const svcStyles = `
+.svc-card {
+  background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07);
+  border-radius:16px; padding:20px 22px;
+  transition:border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  position:relative; overflow:hidden;
+}
+.svc-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,#f97316,#ea580c); opacity:0; transition:opacity 0.2s; border-radius:16px 16px 0 0; }
+.svc-card:hover { border-color:rgba(249,115,22,0.2); transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.25); }
+.svc-card:hover::before { opacity:1; }
+.svc-name { font-size:15px; font-weight:700; color:rgba(255,255,255,0.85); margin-bottom:5px; }
+.svc-desc { font-size:12px; color:rgba(255,255,255,0.3); line-height:1.55; margin-bottom:14px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.svc-meta { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.svc-pill { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); font-size:11px; color:rgba(255,255,255,0.4); }
+.svc-avail-on  { background:rgba(34,197,94,0.08);  color:rgba(74,222,128,0.75);  border-color:rgba(34,197,94,0.18); }
+.svc-avail-off { background:rgba(239,68,68,0.07);  color:rgba(252,165,165,0.65); border-color:rgba(239,68,68,0.15); }
+`;
 
-const ServiceForm = ({ service, onSave, onCancel, loading }) => {
-    const [formData, setFormData] = useState({
-        service_name: '',
-        description: '',
-        device_category: 'smartphone',
-        estimated_duration_minutes: '',
-        base_price: '',
-        is_available: true,
-    });
+const DEVICE_CATS = ['smartphone', 'tablet', 'laptop', 'desktop', 'other'];
+const INIT_FORM = { service_name: '', device_category: 'smartphone', description: '', estimated_duration_minutes: '60', base_price: '', is_available: true };
 
+const ServiceForm = ({ service, onSave, onCancel, saving }) => {
+    const [form, setForm] = useState(INIT_FORM);
     useEffect(() => {
-        if (service) {
-            setFormData({
-                service_name: service.service_name || '',
-                description: service.description || '',
-                device_category: service.device_category || 'smartphone',
-                estimated_duration_minutes: service.estimated_duration_minutes || '',
-                base_price: service.base_price || '',
-                is_available: service.is_available !== undefined ? service.is_available : true,
-            });
-        }
-    }, [service]);
+      if (service) setForm({ service_name: service.service_name || '', device_category: service.device_category || 'smartphone', description: service.description || '', estimated_duration_minutes: service.estimated_duration_minutes || '60', base_price: service.base_price || '', is_available: service.is_available !== undefined ? service.is_available : true });
+      else setForm(INIT_FORM);
+  }, [service]);
 
-    const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    };
-
-    const handleSubmit = (e) => { e.preventDefault(); onSave(formData); };
+    const set = f => e => setForm(p => ({ ...p, [f]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+    const handleSubmit = e => { e.preventDefault(); onSave(form); };
 
     return (
-        <div className="glass-card premium-card p-12 border-none bg-gradient-to-br from-white/[0.03] to-transparent animate-slide-up">
-            <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center text-blue-500">
-                    <Settings size={18} />
-                </div>
-                <h3 className="text-2xl font-normal text-white italic tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>
-                    {service ? 'Modify Service Protocol' : 'Initialize New Protocol'}
-                </h3>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ml-1">Protocol Designation</label>
-                        <input
-                            type="text"
-                            name="service_name"
-                            value={formData.service_name}
-                            onChange={handleChange}
-                            required
-                            className="w-full bg-white/[0.03] border-2 border-white/5 rounded-2xl py-4 px-6 text-sm text-white focus:border-blue-500/50 outline-none transition-all"
-                            placeholder="e.g. Advanced Display Restoration"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ml-1">Hardware Classification</label>
-                        <select
-                            name="device_category"
-                            value={formData.device_category}
-                            onChange={handleChange}
-                            className="w-full bg-slate-900 border-2 border-white/5 rounded-2xl py-4 px-6 text-sm text-white focus:border-blue-500/50 outline-none transition-all appearance-none"
-                        >
-                            {DEVICE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>)}
-                        </select>
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ml-1">Instructional Set</label>
-                    <textarea
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                        rows="4"
-                        className="w-full bg-white/[0.03] border-2 border-white/5 rounded-2xl p-6 text-sm text-white focus:border-blue-500/50 outline-none transition-all resize-none italic"
-                        placeholder="Detailed technical overview of the service protocol…"
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-end">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ml-1">Calibration Time (Minutes)</label>
-                        <div className="relative">
-                            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                            <input
-                                type="number"
-                                name="estimated_duration_minutes"
-                                value={formData.estimated_duration_minutes}
-                                onChange={handleChange}
-                                className="w-full bg-white/[0.03] border-2 border-white/5 rounded-2xl py-3 pl-12 pr-6 text-sm text-white focus:border-blue-500/50 outline-none transition-all"
-                                placeholder="60"
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ml-1">Base Price (RWF)</label>
-                        <div className="relative">
-                            <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                            <input
-                                type="number"
-                                name="base_price"
-                                value={formData.base_price}
-                                onChange={handleChange}
-                                className="w-full bg-white/[0.03] border-2 border-white/5 rounded-2xl py-3 pl-12 pr-6 text-sm text-white focus:border-blue-500/50 outline-none transition-all"
-                                placeholder="15000"
-                            />
-                        </div>
-
-                    </div>
-                    <div className="flex items-center gap-4 bg-white/[0.02] border border-white/5 rounded-2xl p-4">
-                        <div className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                name="is_available"
-                                checked={formData.is_available}
-                                onChange={handleChange}
-                                className="sr-only peer"
-                            />
-                            <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        </div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Protocol Active</span>
-                    </div>
-                </div>
-
-                <div className="flex justify-end gap-4 pt-4">
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="h-14 px-8 rounded-xl bg-white/[0.05] text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/[0.1] transition-all"
-                    >
-                        Abort
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="h-14 px-10 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20 hover:bg-blue-500 transition-all flex items-center gap-3"
-                    >
-                        {loading ? <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" /> : <Save size={14} />}
-                        {service ? 'Commit Changes' : 'Initialize Protocol'}
-                    </button>
-                </div>
-            </form>
-        </div>
-    );
+      <div className="sf-glass sf-anim-scale" style={{ marginBottom: 24 }}>
+          <div className="sf-glass-title">{service ? 'Edit Service' : 'Add New Service'}</div>
+          <div className="sf-glass-sub">Fill in the service details below.</div>
+          <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="sf-field">
+                      <label>Service Name</label>
+                      <input type="text" value={form.service_name} onChange={set('service_name')} placeholder="e.g. Screen Replacement" required />
+                  </div>
+                  <div className="sf-field">
+                      <label>Device Category</label>
+                      <select value={form.device_category} onChange={set('device_category')}>
+                          {DEVICE_CATS.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                      </select>
+                  </div>
+                  <div className="sf-field">
+                      <label>Duration (minutes)</label>
+                      <input type="number" value={form.estimated_duration_minutes} onChange={set('estimated_duration_minutes')} placeholder="60" />
+                  </div>
+                  <div className="sf-field" style={{ gridColumn: '1/-1' }}>
+                      <label>Description</label>
+                      <textarea value={form.description} onChange={set('description')} placeholder="What's included in this service…" />
+                  </div>
+                  <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <label className="sf-toggle" style={{ flexShrink: 0 }}>
+                          <input type="checkbox" checked={form.is_available} onChange={set('is_available')} />
+                          <span className="sf-toggle-slider" />
+                      </label>
+                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Service is active / available to customers</span>
+                  </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <button type="button" className="sf-btn-ghost" onClick={onCancel}>Cancel</button>
+                  <button type="submit" className="sf-btn-primary" disabled={saving}>
+                      {saving ? <><span className="sf-spinner" />Saving…</> : service ? 'Save Changes' : 'Add Service'}
+                  </button>
+              </div>
+          </form>
+      </div>
+  );
 };
 
 const ManageServices = () => {
     const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [editingService, setEditingService] = useState(null);
-    const [actionLoading, setActionLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [orderChanged, setOrderChanged] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const SERVICES_PER_PAGE = 8;
+    const [editing, setEditing] = useState(null); // null=hidden, true=new, service obj=edit
+    const [saving, setSaving] = useState(false);
+    const [search, setSearch] = useState('');
 
-    const fetchServices = async () => {
-        try {
-            setLoading(true);
-            const res = await shopAPI.getMyServices();
-            if (res.data.success) setServices(res.data.services || []);
-        } catch (err) {
-            setError('System synchronization failed.');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const fetch = useCallback(async () => {
+        setLoading(true);
+      try {
+          const res = await getMyServices();
+          if (res.success) setServices(res.services || []);
+      } catch { setError('Failed to load services.'); }
+      finally { setLoading(false); }
+  }, []);
 
-    useEffect(() => { fetchServices(); }, []);
+    useEffect(() => { fetch(); }, [fetch]);
 
-    const handleServicesUpdate = useCallback((newServices) => setServices(newServices), []);
-
-    const filteredServices = useMemo(() =>
-        !searchTerm ? services : services.filter(s => s.service_name.toLowerCase().includes(searchTerm.toLowerCase()))
-        , [services, searchTerm]);
-
-    useEffect(() => { setCurrentPage(1); }, [searchTerm]);
-
-    const totalPages = Math.ceil(filteredServices.length / SERVICES_PER_PAGE);
-    const paginatedServices = useMemo(() => {
-        if (filteredServices.length === 0) return [];
-        const start = (currentPage - 1) * SERVICES_PER_PAGE;
-        return filteredServices.slice(start, start + SERVICES_PER_PAGE);
-    }, [filteredServices, currentPage]);
+    const filtered = useMemo(() =>
+        search ? services.filter(s => s.service_name.toLowerCase().includes(search.toLowerCase())) : services
+        , [services, search]);
 
     const handleSave = async (formData) => {
-        setActionLoading(true);
-        setError('');
-        try {
-            if (editingService && editingService.service_id) {
-                await shopAPI.updateService(editingService.service_id, formData);
-            } else {
-                await shopAPI.addService(formData);
-            }
-            setEditingService(null);
-            setOrderChanged(false);
-            await fetchServices();
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to committing protocol data.');
-        } finally {
-            setActionLoading(false);
-        }
+      setSaving(true); setError('');
+      try {
+          if (editing && editing !== true) await updateService(editing.service_id, formData);
+          else await addService(formData);
+          setEditing(null);
+          await fetch();
+      } catch (err) { setError(err.response?.data?.message || 'Failed to save service.'); }
+      finally { setSaving(false); }
+  };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Delete this service? This action cannot be undone.')) return;
+        try { await deleteService(id); await fetch(); }
+        catch (err) { alert(err.response?.data?.message || 'Failed to delete. May be linked to active appointments.'); }
     };
-
-    const handleDelete = async (serviceId) => {
-        if (window.confirm('Delete this service protocol? This action is irreversible.')) {
-            try {
-                await shopAPI.deleteService(serviceId);
-                setOrderChanged(false);
-                await fetchServices();
-            } catch (err) {
-                setError('Failed to purge protocol.');
-            }
-        }
-    };
-
-    const handleMove = (index, direction) => {
-        const newServices = [...services];
-        const targetIndex = index + direction;
-        if (targetIndex < 0 || targetIndex >= newServices.length) return;
-        [newServices[index], newServices[targetIndex]] = [newServices[targetIndex], newServices[index]];
-        handleServicesUpdate(newServices);
-        setOrderChanged(true);
-    };
-
-    const handleSaveOrder = async () => {
-        setActionLoading(true);
-        setError('');
-        try {
-            const orderedIds = services.map(s => s.service_id);
-            await shopAPI.updateServicesOrder(orderedIds);
-            setOrderChanged(false);
-        } catch (err) {
-            setError('Failed to synchronize protocol order.');
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    useEffect(() => { if (editingService) setOrderChanged(false); }, [editingService]);
-
-    if (loading) return (
-        <div className="flex flex-col items-center justify-center h-[60vh] gap-6 text-slate-500">
-            <div className="w-12 h-12 rounded-full border-2 border-slate-800 border-t-blue-500 animate-spin" />
-            <span className="text-[10px] font-black uppercase tracking-[0.4em]">Synchronizing Protocols...</span>
-        </div>
-    );
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-            <main style={{ width: '100%', maxWidth: 1040, padding: '36px 40px', paddingBottom: 100 }} className="animate-in">
+      <>
+          <style>{svcStyles}</style>
+          <div className="sf-page" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+              <div className="sf-page-wrap">
 
-            {/* Header */}
-            <header className="mb-16 space-y-6">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                        <Layers size={14} />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-500">Service Architecture</span>
-                </div>
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                    <div className="space-y-4">
-                        <h1 className="text-5xl font-normal text-white italic tracking-tighter leading-none" style={{ fontFamily: 'var(--font-serif)' }}>
-                            Service <span className="text-slate-400">Protocols.</span>
-                        </h1>
-                        <p className="text-slate-500 text-sm font-medium">Engineer and manage your hardware restoration catalog.</p>
-                    </div>
-                    {!editingService && (
-                        <button
-                            onClick={() => setEditingService(true)}
-                            className="h-14 px-8 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-200 transition-all hover:-translate-y-1 active:scale-95 flex items-center gap-3"
-                        >
-                            <Plus size={14} /> Initialize Protocol
-                        </button>
-                    )}
-                </div>
-            </header>
+                  {/* Header */}
+                  <div className="sf-anim-up" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>
+                      <div>
+                          <span className="sf-eyebrow">Service Management</span>
+                          <h1 className="sf-page-title">Manage Services</h1>
+                          <p className="sf-page-sub">Define the repairs you offer and their pricing.</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                          <button className="sf-btn-ghost" onClick={fetch} disabled={loading}><RefreshCw size={14} /></button>
+                          {!editing && (
+                              <button className="sf-btn-primary" onClick={() => setEditing(true)}>
+                                  <Plus size={15} /> Add Service
+                              </button>
+                          )}
+                      </div>
+                  </div>
 
-            {/* Notifications & Interaction Banner */}
-            <div className="space-y-4 mb-12">
-                {orderChanged && !editingService && (
-                    <div className="p-6 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-between animate-scale-in">
-                        <div className="flex items-center gap-4">
-                            <ShieldCheck className="text-blue-500" size={20} />
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Protocol Sequence Modified</span>
-                        </div>
-                        <button
-                            onClick={handleSaveOrder}
-                            disabled={actionLoading}
-                            className="h-10 px-6 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20"
-                        >
-                            {actionLoading ? 'Syncing...' : 'Synchronize New Order'}
-                        </button>
-                    </div>
-                )}
+                  {/* Error */}
+                  {error && <div className="sf-error" style={{ marginBottom: 16 }}>{error}</div>}
 
-                {error && (
-                    <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center gap-4 animate-shake">
-                        <XCircle size={20} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">{error}</span>
-                    </div>
-                )}
-            </div>
+                  {/* Form */}
+                  {editing && (
+                      <ServiceForm
+                          service={editing === true ? null : editing}
+                          onSave={handleSave}
+                          onCancel={() => { setEditing(null); setError(''); }}
+                          saving={saving}
+                      />
+                  )}
 
-            {/* Form Workspace */}
-            {editingService && (
-                <div className="mb-20">
-                    <ServiceForm
-                        service={editingService === true ? null : editingService}
-                        onSave={handleSave}
-                        onCancel={() => setEditingService(null)}
-                        loading={actionLoading}
-                    />
-                </div>
-            )}
+                  {/* Search */}
+                  <div className="sf-search-wrap sf-anim-up sf-s1">
+                      <Search size={15} className="sf-search-icon" />
+                      <input className="sf-search-input" placeholder="Search services…" value={search} onChange={e => setSearch(e.target.value)} />
+                  </div>
 
-            {/* Protocol Ledger */}
-            <div className="glass-card premium-card border-none bg-white/[0.01] overflow-hidden">
-                <div className="p-8 border-b border-white/5 flex flex-wrap justify-between items-center gap-8">
-                    <h2 className="text-xl font-normal text-white italic tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>Protocol Ledger</h2>
-                    <div className="relative group w-full md:w-80">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-700 group-focus-within:text-blue-500 transition-colors" size={16} />
-                        <input
-                            type="text"
-                            placeholder="Scan by protocol name..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full bg-slate-900/50 border border-white/5 rounded-xl py-3 pl-12 pr-6 text-xs text-white focus:border-blue-500/30 outline-none transition-all font-medium"
-                        />
-                    </div>
-                </div>
+                  {/* Grid */}
+                  {loading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {[1, 2, 3, 4].map(i => <div key={i} className="sf-skeleton" style={{ height: 180 }} />)}
+                      </div>
+                  ) : filtered.length === 0 ? (
+                      <div className="sf-empty sf-anim-up">
+                          <div className="sf-empty-icon"><Layers size={22} /></div>
+                          <div className="sf-empty-title">{search ? 'No services match your search' : 'No services yet'}</div>
+                          <p className="sf-empty-sub">{search ? 'Try a different keyword.' : 'Add your first service to get started.'}</p>
+                          {!search && <button className="sf-btn-primary" onClick={() => setEditing(true)}><Plus size={14} /> Add Service</button>}
+                      </div>
+                  ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {filtered.map((svc, i) => (
+                                      <div key={svc.service_id} className={`svc-card sf-anim-up sf-s${Math.min(i + 1, 6)}`}>
+                                          <div className="svc-name">{svc.service_name}</div>
+                                          <div className="svc-desc">{svc.description || 'No description provided.'}</div>
+                                          <div className="svc-meta">
+                                              <span className="svc-pill"><Clock size={11} />{svc.estimated_duration_minutes} min</span>
+                                              <span className="svc-pill" style={{ textTransform: 'capitalize' }}>{svc.device_category}</span>
+                                              <span className={`svc-pill ${svc.is_available ? 'svc-avail-on' : 'svc-avail-off'}`}>
+                                                  {svc.is_available ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                                                  {svc.is_available ? 'Active' : 'Offline'}
+                                              </span>
+                                          </div>
+                      <div style={{ display: 'flex', gap: 8, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                          <button className="sf-btn-ghost" style={{ flex: 1, padding: '8px', fontSize: 12, justifyContent: 'center' }} onClick={() => setEditing(svc)}>
+                              <Edit3 size={13} /> Edit
+                          </button>
+                          <button className="sf-btn-danger" style={{ flex: 1, padding: '8px', fontSize: 12, justifyContent: 'center' }} onClick={() => handleDelete(svc.service_id)}>
+                              <Trash2 size={13} /> Delete
+                          </button>
+                      </div>
+                  </div>
+              ))}
+                              </div>
+                  )}
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="border-b border-white/5 bg-white/[0.01]">
-                                <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-widest">Designation</th>
-                                <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-widest">Class</th>
-                                <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-widest">Calibration</th>
-                                <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-widest">Base Price</th>
-                                <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-widest">Status</th>
-                                <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-widest text-right">Sequence</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/[0.03]">
-                            {paginatedServices.length > 0 ? paginatedServices.map((service, idx) => (
-                                <tr key={service.service_id} className="group hover:bg-white/[0.02] transition-colors">
-                                    <td className="px-8 py-6">
-                                        <div className="text-sm font-bold text-white mb-1 group-hover:text-blue-400 transition-colors" style={{ fontFamily: 'var(--font-serif)' }}>{service.service_name}</div>
-                                        <div className="text-[10px] text-slate-500 font-medium truncate max-w-[240px] italic">{service.description}</div>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 py-1 rounded bg-slate-900 border border-white/5">{service.device_category}</span>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-                                            <Clock size={12} className="text-blue-500/50" />
-                                            {service.estimated_duration_minutes}m
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 font-bold">
-                                            <DollarSign size={12} className="text-emerald-500/50" />
-                                            {service.base_price ? `${Number(service.base_price).toLocaleString()} RWF` : 'N/A'}
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        {service.is_available ? (
-                                            <div className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase tracking-widest">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                                Active
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-700 uppercase tracking-widest">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
-                                                Offline
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <div className="flex flex-col mr-4 border-r border-white/10 pr-4">
-                                                <button
-                                                    onClick={() => handleMove(services.indexOf(service), -1)}
-                                                    disabled={services.indexOf(service) === 0 || !!searchTerm}
-                                                    className="p-1 text-slate-700 hover:text-white disabled:opacity-0 transition-all transform hover:scale-110"
-                                                >
-                                                    <ChevronUp size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleMove(services.indexOf(service), 1)}
-                                                    disabled={services.indexOf(service) === services.length - 1 || !!searchTerm}
-                                                    className="p-1 text-slate-700 hover:text-white disabled:opacity-0 transition-all transform hover:scale-110"
-                                                >
-                                                    <ChevronDown size={16} />
-                                                </button>
-                                            </div>
-                                            <button
-                                                onClick={() => setEditingService(service)}
-                                                className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-slate-500 hover:text-blue-500 hover:bg-white transition-all transform active:scale-90"
-                                            >
-                                                <Edit3 size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(service.service_id)}
-                                                className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-all transform active:scale-90"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan="6" className="px-8 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-4 text-slate-700 font-medium">
-                                            <Layers size={40} strokeWidth={1} />
-                                            <span className="text-[10px] font-black uppercase tracking-[0.3em]">
-                                                {searchTerm ? `No sequences detected for "${searchTerm}"` : 'No protocol ledger entries found'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="flex justify-between items-center p-8 border-t border-white/5 bg-white/[0.01]">
-                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">
-                            Page <span className="text-white">{currentPage}</span> of <span className="text-white">{totalPages}</span>
-                        </span>
-                        <div className="flex gap-4">
-                            <button
-                                onClick={() => setCurrentPage(p => p - 1)}
-                                disabled={currentPage === 1}
-                                className="h-10 px-6 rounded-xl bg-slate-900 border border-white/5 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white disabled:opacity-20 transition-all"
-                            >
-                                Previous Sector
-                            </button>
-                            <button
-                                onClick={() => setCurrentPage(p => p + 1)}
-                                disabled={currentPage === totalPages}
-                                className="h-10 px-6 rounded-xl bg-slate-900 border border-white/5 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white disabled:opacity-20 transition-all"
-                            >
-                                Next Sector
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
-            </main>
-        </div>
-    );
+              </div>
+          </div>
+      </>
+  );
 };
 
 export default ManageServices;

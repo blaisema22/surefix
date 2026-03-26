@@ -72,7 +72,7 @@ router.get('/users', auth, verifyAdmin, async (req, res) => {
     try {
         // Fetch users excluding sensitive password data
         const [users] = await pool.query(
-            'SELECT user_id, name, email, role, phone, is_verified, created_at FROM users ORDER BY created_at DESC'
+            'SELECT user_id, name, email, role, phone, is_verified, is_authorized, created_at FROM users ORDER BY created_at DESC'
         );
         res.json({ success: true, users });
     } catch (err) {
@@ -109,6 +109,34 @@ router.patch('/users/:id/verify', auth, verifyAdmin, async (req, res) => {
     }
 });
 
+// @route   PATCH /api/admin/users/:id/authorize
+// @desc    Ban or unban a user by toggling authorization
+// @access  Admin
+router.patch('/users/:id/authorize', auth, verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { is_authorized } = req.body;
+
+    if (typeof is_authorized !== 'boolean') {
+        return res.status(400).json({ success: false, message: 'Invalid status provided.' });
+    }
+
+    try {
+        const [result] = await pool.query(
+            'UPDATE users SET is_authorized = ? WHERE user_id = ?',
+            [is_authorized, id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        res.json({ success: true, message: `User ${is_authorized ? 'unbanned' : 'banned'} successfully.` });
+    } catch (err) {
+        console.error('Error updating authorization status:', err);
+        res.status(500).json({ success: false, message: 'Server error while updating user.' });
+    }
+});
+
 // @route   DELETE /api/admin/users/:id
 // @desc    Delete a user account
 // @access  Admin
@@ -125,19 +153,18 @@ router.delete('/users/:id', auth, verifyAdmin, async (req, res) => {
     }
 });
 
-// @route   GET /api/admin/analytics
-// @desc    Get comprehensive analytics data for dashboard
+// @route   GET /api/admin/overview
+// @desc    Get comprehensive overview data for dashboard
 // @access  Admin
-router.get('/analytics', auth, verifyAdmin, async (req, res) => {
+router.get('/overview', auth, verifyAdmin, async (req, res) => {
     try {
         // 1. Key Metrics (Totals)
         const [users] = await pool.query('SELECT COUNT(*) as count FROM users');
         const [centres] = await pool.query('SELECT COUNT(*) as count FROM repair_centres');
         const [appointments] = await pool.query('SELECT COUNT(*) as count FROM appointments');
         const [revenue] = await pool.query(`
-            SELECT SUM(s.estimated_price_min) as total 
+            SELECT COUNT(*) as total 
             FROM appointments a 
-            JOIN services s ON a.service_id = s.service_id 
             WHERE a.status = 'completed'
         `);
 
@@ -146,9 +173,8 @@ router.get('/analytics', auth, verifyAdmin, async (req, res) => {
             SELECT 
                 DATE_FORMAT(a.appointment_date, '%Y-%m') as month,
                 COUNT(*) as appointments,
-                SUM(CASE WHEN a.status = 'completed' THEN s.estimated_price_min ELSE 0 END) as revenue
+                0 as revenue
             FROM appointments a
-            LEFT JOIN services s ON a.service_id = s.service_id
             WHERE a.appointment_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
             GROUP BY month
             ORDER BY month ASC
@@ -163,7 +189,7 @@ router.get('/analytics', auth, verifyAdmin, async (req, res) => {
 
         res.json({
             success: true,
-            analytics: {
+            overview: {
                 total_users: users[0].count,
                 total_centres: centres[0].count,
                 total_appointments: appointments[0].count,
@@ -173,8 +199,33 @@ router.get('/analytics', auth, verifyAdmin, async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Error fetching analytics:', err);
-        res.status(500).json({ success: false, message: 'Server error fetching analytics.' });
+        console.error('Error fetching overview:', err);
+        res.status(500).json({ success: false, message: 'Server error fetching overview.' });
+    }
+});
+
+// @route   GET /api/admin/appointments
+// @desc    Get all appointments for dashboard feed
+// @access  Admin
+router.get('/appointments', auth, verifyAdmin, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                a.appointment_id,
+                a.appointment_date,
+                a.status,
+                u.name as customer_name,
+                rc.name as centre_name
+            FROM appointments a
+            LEFT JOIN users u ON a.user_id = u.user_id
+            LEFT JOIN repair_centres rc ON a.centre_id = rc.centre_id
+            ORDER BY a.created_at DESC
+        `;
+        const [appointments] = await pool.query(query);
+        res.json({ success: true, appointments });
+    } catch (err) {
+        console.error('Error fetching admin appointments:', err);
+        res.status(500).json({ success: false, message: 'Server error fetching appointments.' });
     }
 });
 

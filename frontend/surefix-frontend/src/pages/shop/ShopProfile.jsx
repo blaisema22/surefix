@@ -41,7 +41,7 @@ const MAP_STYLES = [
 ];
 
 const ShopProfile = () => {
-    const { user, setUser } = useAuth();
+    const { user, updateUser } = useAuth();
     const [centre, setCentre] = useState({ name: '', address: '', district: '', phone: '', email: '', description: '', latitude: '', longitude: '', opening_time: '09:00', closing_time: '18:00', working_days: 'Mon - Sat' });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -155,7 +155,7 @@ const ShopProfile = () => {
             if (isNew) {
                 await api.post('/centres/my/centre', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                 setIsNew(false);
-                if (user) setUser({ ...user, hasCentre: true });
+                if (user) updateUser({ hasCentre: true });
                 load();
             } else {
                 await api.put('/centres/my/centre', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
